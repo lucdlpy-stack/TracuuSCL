@@ -1,0 +1,6 @@
+{
+  "name": "SỔ TAY TRA CỨU VÀ QUẢN LÝ TÀI SẢN",
+  "description": "Ứng dụng tra cứu, quản lý tài sản, theo dõi lịch sử sửa chữa lớn (SCL), kế hoạch ĐTXD và tự động cảnh báo chu kỳ bảo trì thiết bị điện lực EVN.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

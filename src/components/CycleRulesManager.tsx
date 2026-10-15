@@ -310,7 +310,7 @@ export const CycleRulesManager: React.FC = () => {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full mt-1 p-2 bg-slate-50 border rounded font-semibold"
+                  className="w-full mt-1 p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900"
                 >
                   <option value="Thiết bị đóng cắt">Thiết bị đóng cắt</option>
                   <option value="Máy biến áp / Trạm biến áp">Máy biến áp / Trạm biến áp</option>
@@ -325,7 +325,7 @@ export const CycleRulesManager: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-slate-700">Chu kỳ tính bằng Năm:</label>
+                  <label className="font-bold text-slate-900 block mb-1">Chu kỳ tính bằng Năm:</label>
                   <input
                     type="number"
                     value={cycleYears}
@@ -336,28 +336,28 @@ export const CycleRulesManager: React.FC = () => {
                     }}
                     min={1}
                     max={30}
-                    className="w-full mt-1 p-2 bg-slate-50 border rounded font-bold text-blue-900"
+                    className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900"
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-slate-700">Tương đương Tháng:</label>
+                  <label className="font-bold text-slate-900 block mb-1">Tương đương Tháng:</label>
                   <input
                     type="number"
                     value={cycleMonths}
                     onChange={(e) => setCycleMonths(Number(e.target.value))}
                     min={1}
                     max={360}
-                    className="w-full mt-1 p-2 bg-slate-50 border rounded font-bold text-slate-800"
+                    className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700">Điều kiện phát cảnh báo:</label>
+                <label className="font-bold text-slate-900 block mb-1">Điều kiện phát cảnh báo:</label>
                 <select
                   value={ruleMode}
                   onChange={(e) => setRuleMode(e.target.value as RuleMode)}
-                  className="w-full mt-1 p-2 bg-slate-50 border rounded font-semibold"
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900"
                 >
                   <option value="Greater">Phải lớn hơn chu kỳ (&gt; mốc) [Mặc định]</option>
                   <option value="Exact">Đủ mốc chu kỳ (&ge; mốc)</option>
@@ -365,24 +365,24 @@ export const CycleRulesManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700">Số hiệu văn bản áp dụng:</label>
+                <label className="font-bold text-slate-900 block mb-1">Số hiệu văn bản áp dụng:</label>
                 <input
                   type="text"
                   placeholder="QĐ-315/QĐ-EVN-KT"
                   value={documentNo}
                   onChange={(e) => setDocumentNo(e.target.value)}
-                  className="w-full mt-1 p-2 bg-slate-50 border rounded font-mono"
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-mono text-slate-900"
                 />
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700">Nguồn quy định:</label>
+                <label className="font-bold text-slate-900 block mb-1">Nguồn quy định:</label>
                 <input
                   type="text"
-                  placeholder="Quy trình vận hành bảo trì EVN..."
+                  placeholder="Quy chuẩn kỹ thuật EVN..."
                   value={documentSource}
                   onChange={(e) => setDocumentSource(e.target.value)}
-                  className="w-full mt-1 p-2 bg-slate-50 border rounded"
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-900"
                 />
               </div>
 

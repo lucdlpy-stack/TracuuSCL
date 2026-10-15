@@ -11,6 +11,8 @@ import {
   Settings,
   CalendarCheck,
   FolderGit2,
+  User,
+  LogOut,
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -22,7 +24,15 @@ export const Navigation: React.FC<NavigationProps> = ({
   mobileMenuOpen,
   setMobileMenuOpen,
 }) => {
-  const { activeTab, setActiveTab, assets, repairRecords, planRecords } = useApp();
+  const {
+    activeTab,
+    setActiveTab,
+    assets,
+    repairRecords,
+    planRecords,
+    currentUser,
+    logout,
+  } = useApp();
 
   const navItems = [
     { id: 'home', label: 'Trang chủ', icon: Home },
@@ -110,6 +120,43 @@ export const Navigation: React.FC<NavigationProps> = ({
               </button>
             );
           })}
+
+          {/* Mobile User Card & Logout */}
+          {currentUser && (
+            <div className="pt-3 mt-2 border-t border-slate-800 space-y-2">
+              <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white text-sm">
+                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-white">{currentUser.name}</div>
+                    <div className="text-[10px] text-blue-300">
+                      {currentUser.role === 'Admin'
+                        ? 'Quản trị viên'
+                        : currentUser.role === 'Technical'
+                        ? 'Kỹ sư Kỹ thuật'
+                        : 'Kỹ sư Vận hành'}{' '}
+                      • {currentUser.unit}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  if (window.confirm('Đồng chí có chắc chắn muốn đăng xuất khỏi ứng dụng?')) {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }
+                }}
+                className="w-full flex items-center justify-center space-x-2 py-2.5 px-3 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4 text-rose-400" />
+                <span>Đăng xuất khỏi hệ thống</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </>

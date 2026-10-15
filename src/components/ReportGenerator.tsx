@@ -167,7 +167,7 @@ export const ReportGenerator: React.FC = () => {
                 <select
                   value={reportYear}
                   onChange={(e) => setReportYear(Number(e.target.value))}
-                  className="p-1.5 bg-slate-100 border rounded font-bold"
+                  className="p-1.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900"
                 >
                   <option value={2025}>2025</option>
                   <option value={2026}>2026</option>

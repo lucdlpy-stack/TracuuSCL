@@ -378,24 +378,24 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ assetCode, o
                   <h4 className="font-bold text-slate-900">Khai báo Lần Sửa chữa Mới</h4>
 
                   <div>
-                    <label className="font-semibold text-slate-700">Tên Công trình SCL *:</label>
+                    <label className="font-bold text-slate-900 block mb-1">Tên Công trình SCL *:</label>
                     <input
                       type="text"
                       placeholder="VD: Công trình SCL Trạm 110kV Chợ Lớn 2024..."
                       value={newProjectName}
                       onChange={(e) => setNewProjectName(e.target.value)}
                       required
-                      className="w-full mt-1 p-2 bg-white border rounded font-semibold text-slate-900"
+                      className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 placeholder:text-slate-500"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="font-semibold text-slate-700">Loại sửa chữa:</label>
+                      <label className="font-bold text-slate-900 block mb-1">Loại sửa chữa:</label>
                       <select
                         value={newRepairType}
                         onChange={(e) => setNewRepairType(e.target.value as any)}
-                        className="w-full mt-1 p-2 bg-white border rounded font-semibold"
+                        className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900"
                       >
                         <option value="SCL">SCL (Sửa chữa lớn)</option>
                         <option value="SCTX">SCTX (Thường xuyên)</option>
@@ -404,34 +404,34 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ assetCode, o
                       </select>
                     </div>
                     <div>
-                      <label className="font-semibold text-slate-700">Năm thực hiện:</label>
+                      <label className="font-bold text-slate-900 block mb-1">Năm thực hiện:</label>
                       <input
                         type="number"
                         value={newRepairYear}
                         onChange={(e) => setNewRepairYear(Number(e.target.value))}
-                        className="w-full mt-1 p-2 bg-white border rounded font-bold"
+                        className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900"
                       />
                     </div>
                     <div>
-                      <label className="font-semibold text-slate-700">Ngày hoàn thành:</label>
+                      <label className="font-bold text-slate-900 block mb-1">Ngày hoàn thành:</label>
                       <input
                         type="date"
                         value={newRepairEndDate}
                         onChange={(e) => setNewRepairEndDate(e.target.value)}
-                        className="w-full mt-1 p-2 bg-white border rounded"
+                        className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-semibold text-slate-900"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="font-semibold text-slate-700">Nội dung công việc *:</label>
+                    <label className="font-bold text-slate-900 block mb-1">Nội dung công việc *:</label>
                     <input
                       type="text"
                       placeholder="Nội dung SCL chi tiết..."
                       value={newRepairContent}
                       onChange={(e) => setNewRepairContent(e.target.value)}
                       required
-                      className="w-full mt-1 p-2 bg-white border rounded"
+                      className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-900 placeholder:text-slate-500"
                     />
                   </div>
 

@@ -184,3 +184,21 @@ export interface ExcelImportSummary {
   skipCount: number;
   errorsList: Array<{ row: number; reason: string }>;
 }
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  role: string;
+  unit: string;
+}
+
+export interface PasswordValidationResult {
+  valid: boolean;
+  hasMinLength: boolean;
+  hasLetter: boolean;
+  hasNumber: boolean;
+  message?: string;
+}
+

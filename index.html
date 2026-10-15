@@ -2,7 +2,10 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>SỔ TAY TRA CỨU VÀ QUẢN LÝ TÀI SẢN - EVN</title>
     <meta name="description" content="Ứng dụng tra cứu, quản lý tài sản, theo dõi lịch sử sửa chữa lớn (SCL), kế hoạch ĐTXD và tự động cảnh báo chu kỳ bảo trì thiết bị điện lực EVN." />
     <meta property="og:title" content="SỔ TAY TRA CỨU VÀ QUẢN LÝ TÀI SẢN - EVN" />
@@ -11,6 +14,12 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#1e3a8a" />
+    <script>
+      // Prevent mobile double-tap or pinch-zoom gestures from zooming in
+      document.addEventListener('gesturestart', function (e) {
+        e.preventDefault();
+      });
+    </script>
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased font-sans">
     <div id="root"></div>

@@ -23,7 +23,6 @@ const COLUMN_HEADER_MAP: Record<string, keyof Asset> = {
   'tên tài sản': 'assetName',
   'ten tai san': 'assetName',
   'tên thiết bị': 'assetName',
-  'tên công trình': 'assetName',
   'tài sản': 'assetName',
 
   'loại tài sản': 'category',
@@ -63,13 +62,14 @@ const COLUMN_HEADER_MAP: Record<string, keyof Asset> = {
   'noi dung sua chua': 'lastMajorRepairContent',
   'nội dung scl': 'lastMajorRepairContent',
 
-  'năm cải tạo đtxd': 'lastRenovationYear',
-  'năm đtxd': 'lastRenovationYear',
-  'nam cai tao đtxd': 'lastRenovationYear',
-  'năm cải tạo': 'lastRenovationYear',
+  'công trình': 'lastMajorRepairProject',
+  'tên công trình': 'lastMajorRepairProject',
+  'công trình scl': 'lastMajorRepairProject',
+  'dự án': 'lastMajorRepairProject',
 
-  'nội dung cải tạo': 'lastRenovationContent',
-  'noi dung đtxd': 'lastRenovationContent',
+  'chu kỳ': 'customCycleYears',
+  'chu kỳ scl': 'customCycleYears',
+  'chu ky': 'customCycleYears',
 
   'ghi chú': 'notes',
   'ghi chu': 'notes',

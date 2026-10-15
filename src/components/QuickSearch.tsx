@@ -74,7 +74,7 @@ export const QuickSearch: React.FC<QuickSearchProps> = ({ onSelectAsset }) => {
     if (
       plans.some(
         (p) =>
-          p.planName.toLowerCase().includes(q) ||
+          p.projectName.toLowerCase().includes(q) ||
           (p.planCode && p.planCode.toLowerCase().includes(q)) ||
           (p.workContent && p.workContent.toLowerCase().includes(q))
       )
@@ -279,12 +279,8 @@ export const QuickSearch: React.FC<QuickSearchProps> = ({ onSelectAsset }) => {
                       <span
                         className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${
                           planStatus.planColor === 'BLUE'
-                            ? 'bg-blue-50 text-blue-700 border-blue-300'
-                            : planStatus.planColor === 'PURPLE'
-                            ? 'bg-purple-50 text-purple-700 border-purple-300'
-                            : planStatus.planColor === 'COMBINED'
-                            ? 'bg-indigo-100 text-indigo-900 border-indigo-300 font-bold'
-                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                            ? 'bg-blue-900/60 text-blue-200 border-blue-600'
+                            : 'bg-slate-800 text-slate-300 border-slate-700'
                         }`}
                       >
                         {planStatus.statusLabel}

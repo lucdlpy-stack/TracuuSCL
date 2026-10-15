@@ -229,7 +229,7 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
               </span>
               <button
                 onClick={handleResetFilters}
-                className="text-blue-600 hover:text-blue-800 font-bold hover:underline"
+                className="text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer"
               >
                 Xóa tất cả bộ lọc
               </button>
@@ -238,14 +238,14 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* 1. Category */}
               <div>
-                <label className="font-semibold text-slate-600 block mb-1">Loại thiết bị:</label>
+                <label className="font-bold text-slate-900 block mb-1">Loại thiết bị:</label>
                 <select
                   value={categoryFilter}
                   onChange={(e) => {
                     setCategoryFilter(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2 font-semibold text-slate-800 focus:outline-none"
+                  className="w-full bg-white border border-slate-300 rounded-lg p-2 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="ALL">-- Tất cả loại thiết bị ({categories.length}) --</option>
                   {categories.map((c) => (
@@ -258,14 +258,14 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
 
               {/* 2. Management Unit */}
               <div>
-                <label className="font-semibold text-slate-600 block mb-1">Đơn vị quản lý:</label>
+                <label className="font-bold text-slate-900 block mb-1">Đơn vị quản lý:</label>
                 <select
                   value={unitFilter}
                   onChange={(e) => {
                     setUnitFilter(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2 font-semibold text-slate-800 focus:outline-none"
+                  className="w-full bg-white border border-slate-300 rounded-lg p-2 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="ALL">-- Tất cả đơn vị --</option>
                   {units.map((u) => (
@@ -278,14 +278,14 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
 
               {/* 3. Cycle Warning Status */}
               <div>
-                <label className="font-semibold text-slate-600 block mb-1">Tình trạng cảnh báo hiện tại:</label>
+                <label className="font-bold text-slate-900 block mb-1">Tình trạng cảnh báo hiện tại:</label>
                 <select
                   value={cycleFilter}
                   onChange={(e) => {
                     setCycleFilter(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2 font-semibold text-slate-800 focus:outline-none"
+                  className="w-full bg-white border border-slate-300 rounded-lg p-2 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="ALL">-- Tất cả trạng thái --</option>
                   <option value="RED">Chưa đủ chu kỳ (Đỏ)</option>
@@ -296,7 +296,7 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
 
               {/* 4. Commissioning Year Range */}
               <div>
-                <label className="font-semibold text-slate-600 block mb-1">Khoảng năm vận hành:</label>
+                <label className="font-bold text-slate-900 block mb-1">Khoảng năm vận hành:</label>
                 <div className="flex items-center space-x-1">
                   <input
                     type="number"
@@ -306,7 +306,7 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
                       setCommYearMin(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="w-1/2 p-2 bg-white border border-slate-300 rounded-lg font-bold"
+                    className="w-1/2 p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 placeholder:text-slate-500"
                   />
                   <span className="text-slate-400">-</span>
                   <input
@@ -317,7 +317,7 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
                       setCommYearMax(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="w-1/2 p-2 bg-white border border-slate-300 rounded-lg font-bold"
+                    className="w-1/2 p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 placeholder:text-slate-500"
                   />
                 </div>
               </div>
@@ -331,9 +331,9 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
                   placeholder="Lọc từ khóa mã tài sản, tên thiết bị..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg font-medium focus:outline-none"
+                  className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
+                <Search className="w-4 h-4 text-slate-500 absolute left-2.5 top-2.5" />
               </div>
 
               <div>
@@ -345,7 +345,7 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
                     setLocationFilter(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-medium focus:outline-none"
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -353,21 +353,21 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
         )}
       </div>
 
-      {/* Main Table */}
+      {/* Main Table - Optimized to fit completely within 1 page width on web */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-800 text-white font-bold uppercase text-[11px] tracking-wider">
+        <div className="overflow-x-auto lg:overflow-x-hidden">
+          <table className="w-full text-left text-xs lg:table-fixed">
+            <thead className="bg-slate-800 text-white font-bold uppercase text-[10px] sm:text-[11px] tracking-wider">
               <tr>
-                <th className="p-3.5">Mã TS</th>
-                <th className="p-3.5">Tên tài sản & Thiết bị</th>
-                <th className="p-3.5">Đơn vị quản lý</th>
-                <th className="p-3.5">Năm VH</th>
-                <th className="p-3.5">Chu kỳ (Chỉnh sửa)</th>
-                <th className="p-3.5">Lần SCL gần nhất</th>
-                <th className="p-3.5">Cảnh báo Chu kỳ</th>
-                <th className="p-3.5">KH SCL năm {currentYear}</th>
-                <th className="p-3.5 text-right">Thao tác</th>
+                <th className="p-2.5 w-[110px] lg:w-[11%]">Mã TS</th>
+                <th className="p-2.5 w-auto lg:w-[24%]">Tên tài sản</th>
+                <th className="p-2.5 w-[120px] lg:w-[14%]">Đơn vị QLVH</th>
+                <th className="p-2.5 w-[60px] lg:w-[6%] text-center">Năm VH</th>
+                <th className="p-2.5 w-[80px] lg:w-[8%] text-center">Chu kỳ</th>
+                <th className="p-2.5 w-[120px] lg:w-[14%]">SCL gần nhất</th>
+                <th className="p-2.5 w-[120px] lg:w-[13%]">Cảnh báo chu kỳ</th>
+                <th className="p-2.5 w-[100px] lg:w-[10%]">KH SCL {currentYear}</th>
+                <th className="p-2.5 w-[60px] lg:w-[4%] text-right">Xem</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -386,52 +386,62 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
                   return (
                     <tr
                       key={asset.assetCode}
-                      className="hover:bg-blue-50/50 transition-colors group cursor-pointer"
+                      className="hover:bg-blue-50/60 transition-colors group cursor-pointer"
                       onClick={() => onSelectAsset(asset.assetCode)}
                     >
-                      <td className="p-3.5 font-mono font-bold text-blue-900 whitespace-nowrap">
-                        {asset.assetCode}
+                      {/* Mã TS */}
+                      <td className="p-2 font-mono font-bold text-blue-900 truncate" title={asset.assetCode}>
+                        <span className="bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                          {asset.assetCode}
+                        </span>
                       </td>
-                      <td className="p-3.5 font-bold text-slate-900 max-w-xs">
-                        <div className="line-clamp-2">{asset.assetName}</div>
-                        <span className="text-[10px] text-slate-500 font-normal">
+
+                      {/* Tên tài sản */}
+                      <td className="p-2 font-bold text-slate-900">
+                        <div className="line-clamp-2 leading-tight" title={asset.assetName}>
+                          {asset.assetName}
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-normal truncate block mt-0.5" title={asset.location}>
                           {asset.location}
                         </span>
                       </td>
-                      <td className="p-3.5 text-slate-600 font-medium whitespace-nowrap">
+
+                      {/* Đơn vị QLVH */}
+                      <td className="p-2 text-slate-700 font-medium truncate" title={asset.unit}>
                         {asset.unit}
                       </td>
-                      <td className="p-3.5 font-semibold text-slate-700">
+
+                      {/* Năm VH */}
+                      <td className="p-2 font-extrabold text-slate-800 text-center">
                         {asset.commissioningYear || '-'}
                       </td>
 
-                      {/* Custom Cycle Column Editor */}
-                      <td className="p-3.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      {/* Chu kỳ & Inline Edit */}
+                      <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
                         {isEditingThis ? (
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center justify-center space-x-1">
                             <input
                               type="number"
                               value={editingYears}
                               onChange={(e) => setEditingYears(Number(e.target.value))}
-                              className="w-12 p-1 border border-blue-500 rounded font-bold text-center text-blue-900 bg-white"
+                              className="w-10 p-1 border border-blue-500 rounded font-bold text-center text-slate-900 bg-white text-xs"
                               min={1}
                               max={20}
                               autoFocus
                             />
-                            <span className="text-[10px] text-slate-500 font-bold">năm</span>
                             <button
                               onClick={() => handleSaveCustomCycle(asset.assetCode)}
                               className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
                               title="Lưu chu kỳ"
                             >
-                              <Check className="w-3.5 h-3.5" />
+                              <Check className="w-3 h-3" />
                             </button>
                             <button
                               onClick={() => setEditingCycleCode(null)}
                               className="p-1 bg-slate-200 text-slate-700 rounded hover:bg-slate-300"
                               title="Hủy"
                             >
-                              <X className="w-3.5 h-3.5" />
+                              <X className="w-3 h-3" />
                             </button>
                           </div>
                         ) : (
@@ -440,79 +450,90 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
                               setEditingCycleCode(asset.assetCode);
                               setEditingYears(cycleStatus.appliedCycleYears);
                             }}
-                            className={`inline-flex items-center space-x-1 px-2 py-1 rounded text-[11px] font-bold border transition-colors ${
+                            className={`inline-flex items-center space-x-0.5 px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
                               cycleStatus.isCustomCycle
                                 ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
                                 : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
                             }`}
-                            title="Bấm để chỉnh sửa chu kỳ riêng cho tài sản này"
+                            title="Bấm để chỉnh sửa chu kỳ riêng"
                           >
-                            <span>{cycleStatus.appliedCycleYears} năm</span>
+                            <span>{cycleStatus.appliedCycleYears}n</span>
                             {cycleStatus.isCustomCycle && (
-                              <span className="text-[9px] bg-amber-200 text-amber-900 px-1 rounded">Riêng</span>
+                              <span className="text-[8px] bg-amber-200 text-amber-900 px-0.5 rounded font-black">
+                                R
+                              </span>
                             )}
-                            <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-blue-600 ml-1" />
+                            <Edit2 className="w-2.5 h-2.5 text-slate-400 group-hover:text-blue-600 ml-0.5" />
                           </button>
                         )}
                       </td>
 
-                      <td className="p-3.5 font-semibold text-slate-800 max-w-xs">
+                      {/* Lần SCL gần nhất */}
+                      <td className="p-2 font-medium text-slate-800">
                         {asset.lastMajorRepairYear ? (
                           <div>
-                            <div>Năm {asset.lastMajorRepairYear}</div>
+                            <span className="font-bold text-slate-900 text-xs">Năm {asset.lastMajorRepairYear}</span>
                             {asset.lastMajorRepairProject && (
-                              <div className="text-[10px] text-blue-700 font-semibold truncate">
-                                CT: {asset.lastMajorRepairProject}
+                              <div className="text-[10px] text-blue-700 font-semibold truncate" title={asset.lastMajorRepairProject}>
+                                {asset.lastMajorRepairProject}
                               </div>
                             )}
                           </div>
                         ) : (
-                          <span className="text-amber-700 italic">Chưa SCL</span>
+                          <span className="text-amber-700 italic text-[11px]">Chưa SCL</span>
                         )}
                       </td>
-                      <td className="p-3.5 whitespace-nowrap">
+
+                      {/* Cảnh báo chu kỳ */}
+                      <td className="p-2">
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border truncate ${
                             cycleStatus.statusColor === 'RED'
                               ? 'bg-rose-50 text-rose-700 border-rose-300'
                               : cycleStatus.statusColor === 'YELLOW'
                               ? 'bg-amber-50 text-amber-800 border-amber-300'
                               : 'bg-emerald-50 text-emerald-800 border-emerald-300'
                           }`}
+                          title={cycleStatus.reason || cycleStatus.statusLabel}
                         >
-                          {cycleStatus.statusLabel}
+                          <span className="truncate">{cycleStatus.statusLabel}</span>
                         </span>
                       </td>
-                      <td className="p-3.5 whitespace-nowrap">
+
+                      {/* KH SCL năm */}
+                      <td className="p-2">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border block text-center truncate ${
                             planStatus.planColor === 'BLUE'
-                              ? 'bg-blue-50 text-blue-700 border-blue-300'
+                              ? 'bg-blue-50 text-blue-800 border-blue-300 font-bold'
                               : 'bg-slate-100 text-slate-600 border-slate-200'
                           }`}
+                          title={planStatus.statusLabel}
                         >
                           {planStatus.statusLabel}
                         </span>
                       </td>
-                      <td className="p-3.5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+
+                      {/* Thao tác */}
+                      <td className="p-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end space-x-1">
                           <button
                             onClick={() => onSelectAsset(asset.assetCode)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg"
-                            title="Xem chi tiết"
+                            className="p-1 text-blue-600 hover:bg-blue-100 rounded cursor-pointer"
+                            title="Xem chi tiết tài sản"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm(`Bạn có chắc chắn muốn xóa tài sản "${asset.assetCode}"?`)) {
+                              if (confirm(`Bạn có chắc muốn xóa tài sản "${asset.assetCode}"?`)) {
                                 deleteAsset(asset.assetCode);
                               }
                             }}
-                            className="p-1.5 text-rose-600 hover:bg-rose-100 rounded-lg"
+                            className="p-1 text-rose-600 hover:bg-rose-100 rounded cursor-pointer"
                             title="Xóa tài sản"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
@@ -557,38 +578,38 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
               Khai báo Tài sản Mới
             </h3>
 
-            <form onSubmit={handleCreateSubmit} className="space-y-3 text-xs">
+            <form onSubmit={handleCreateSubmit} className="space-y-3.5 text-xs">
               <div>
-                <label className="font-semibold text-slate-700">Mã tài sản * (Bắt buộc, duy nhất):</label>
+                <label className="font-bold text-slate-900 block mb-1">Mã tài sản * (Bắt buộc, duy nhất):</label>
                 <input
                   type="text"
                   placeholder="VD: EVN-CL-REC-99"
                   value={newCode}
                   onChange={(e) => setNewCode(e.target.value)}
                   required
-                  className="w-full mt-1 p-2 bg-slate-50 border rounded font-mono font-bold"
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-mono font-bold text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700">Tên tài sản *:</label>
+                <label className="font-bold text-slate-900 block mb-1">Tên tài sản *:</label>
                 <input
                   type="text"
                   placeholder="VD: Máy cắt Trạm 110kV..."
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   required
-                  className="w-full mt-1 p-2 bg-slate-50 border rounded font-semibold"
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-slate-700">Loại tài sản:</label>
+                  <label className="font-bold text-slate-900 block mb-1">Loại tài sản:</label>
                   <select
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value as any)}
-                    className="w-full mt-1 p-2 bg-slate-50 border rounded"
+                    className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="Thiết bị đóng cắt">Thiết bị đóng cắt</option>
                     <option value="Máy biến áp / Trạm biến áp">Máy biến áp / Trạm biến áp</option>
@@ -599,69 +620,69 @@ export const AssetTable: React.FC<AssetTableProps> = ({ onSelectAsset }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="font-semibold text-slate-700">Năm đưa vào vận hành:</label>
+                  <label className="font-bold text-slate-900 block mb-1">Năm đưa vào vận hành:</label>
                   <input
                     type="number"
                     value={newCommYear}
                     onChange={(e) => setNewCommYear(Number(e.target.value))}
-                    className="w-full mt-1 p-2 bg-slate-50 border rounded font-bold"
+                    className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-slate-700">Đơn vị quản lý:</label>
+                  <label className="font-bold text-slate-900 block mb-1">Đơn vị quản lý:</label>
                   <input
                     type="text"
                     value={newUnit}
                     onChange={(e) => setNewUnit(e.target.value)}
-                    className="w-full mt-1 p-2 bg-slate-50 border rounded"
+                    className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-slate-700">Chu kỳ SCL (Năm):</label>
+                  <label className="font-bold text-slate-900 block mb-1">Chu kỳ SCL (Năm):</label>
                   <input
                     type="number"
                     value={newCustomCycle}
                     onChange={(e) => setNewCustomCycle(Number(e.target.value))}
-                    className="w-full mt-1 p-2 bg-slate-50 border rounded font-bold text-blue-700"
+                    className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700">Vị trí lắp đặt:</label>
+                <label className="font-bold text-slate-900 block mb-1">Vị trí lắp đặt:</label>
                 <input
                   type="text"
                   placeholder="Trạm 110kV Chợ Lớn..."
                   value={newLocation}
                   onChange={(e) => setNewLocation(e.target.value)}
-                  className="w-full mt-1 p-2 bg-slate-50 border rounded"
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700">Ghi chú:</label>
+                <label className="font-bold text-slate-900 block mb-1">Ghi chú:</label>
                 <textarea
                   value={newNotes}
                   onChange={(e) => setNewNotes(e.target.value)}
                   rows={2}
-                  className="w-full mt-1 p-2 bg-slate-50 border rounded"
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
-              <div className="flex justify-end space-x-2 pt-3 border-t">
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-lg"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow cursor-pointer"
                 >
                   Lưu Tài sản
                 </button>

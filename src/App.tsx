@@ -14,10 +14,22 @@ import { ConfigSync } from './components/ConfigSync';
 import { CycleRulesManager } from './components/CycleRulesManager';
 import { AssetDetailModal } from './components/AssetDetailModal';
 import { MobileTabBar } from './components/MobileTabBar';
+import { LoginScreen } from './components/LoginScreen';
 
 const AppContent: React.FC = () => {
-  const { activeTab, selectedAssetCode, setSelectedAssetCode } = useApp();
+  const {
+    activeTab,
+    selectedAssetCode,
+    setSelectedAssetCode,
+    isAuthenticated,
+    login,
+  } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Secure Authentication Gateway: Require login with account and letter+digit password
+  if (!isAuthenticated) {
+    return <LoginScreen onLoginSuccess={login} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white overflow-x-hidden relative">

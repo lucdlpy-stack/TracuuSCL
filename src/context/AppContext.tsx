@@ -7,6 +7,7 @@ import {
   SystemLog,
   CalculatedCycleStatus,
   CalculatedPlanStatus,
+  AuthUser,
 } from '../types/asset';
 import {
   loadStoredData,
@@ -23,6 +24,8 @@ import {
   calculatePlanStatus,
   getApplicableRule,
 } from '../services/cycleEngine';
+import { getStoredUser, clearStoredAuth, checkAuth } from '../services/auth';
+import { realtimeSync } from '../services/realtimeSync';
 
 const STORAGE_KEYS = {
   ASSETS: 'evn_assets_db_v2',
@@ -32,10 +35,17 @@ const STORAGE_KEYS = {
   LOGS: 'evn_logs_db_v2',
 };
 
-// Cross-tab / Cross-window broadcast channel for instant real-time sync
+// Cross-tab broadcast channel
 const syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('evn_realtime_sync_channel') : null;
 
 interface AppContextType {
+  // Auth
+  currentUser: AuthUser | null;
+  isAuthenticated: boolean;
+  login: (user: AuthUser, token: string) => void;
+  logout: () => void;
+
+  // Data
   assets: Asset[];
   repairRecords: RepairRecord[];
   planRecords: PlanRecord[];
@@ -94,6 +104,10 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getStoredUser());
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!getStoredUser());
+
   const [assets, setAssets] = useState<Asset[]>(() =>
     loadStoredData<Asset[]>(STORAGE_KEYS.ASSETS, SEED_ASSETS)
   );
@@ -119,7 +133,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [lastSyncedAt, setLastSyncedAt] = useState<string>(new Date().toISOString());
 
-  // Listen for online/offline
+  // Check auth session on startup
+  useEffect(() => {
+    checkAuth().then((user) => {
+      if (user) {
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+      } else {
+        // if token invalid
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+      }
+    });
+  }, []);
+
+  // Listen for online/offline events
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -131,7 +159,78 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, []);
 
-  // Real-time listener across browser windows & smartphone PWA tabs
+  // Real-time synchronization subscription (SSE Stream from server)
+  useEffect(() => {
+    const unsubscribe = realtimeSync.subscribe((remotePayload) => {
+      if (Array.isArray(remotePayload.assets)) {
+        setAssets(remotePayload.assets);
+        saveStoredData(STORAGE_KEYS.ASSETS, remotePayload.assets);
+      }
+      if (Array.isArray(remotePayload.repairRecords)) {
+        setRepairRecords(remotePayload.repairRecords);
+        saveStoredData(STORAGE_KEYS.REPAIRS, remotePayload.repairRecords);
+      }
+      if (Array.isArray(remotePayload.planRecords)) {
+        setPlanRecords(remotePayload.planRecords);
+        saveStoredData(STORAGE_KEYS.PLANS, remotePayload.planRecords);
+      }
+      if (Array.isArray(remotePayload.cycleRules)) {
+        setCycleRules(remotePayload.cycleRules);
+        saveStoredData(STORAGE_KEYS.RULES, remotePayload.cycleRules);
+      }
+      if (Array.isArray(remotePayload.systemLogs)) {
+        setSystemLogs(remotePayload.systemLogs);
+        saveStoredData(STORAGE_KEYS.LOGS, remotePayload.systemLogs);
+      }
+      setLastSyncedAt(new Date().toISOString());
+    });
+
+    // Also pull latest data from server immediately on startup
+    fetch('/api/sync/pull')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.data || !Array.isArray(data.data.assets) || data.data.assets.length === 0) {
+          // Push local seed data to server so all devices receive it
+          realtimeSync.pushUpdate({
+            assets,
+            repairRecords,
+            planRecords,
+            cycleRules,
+            systemLogs,
+          });
+        } else {
+          // Sync server data to client
+          if (Array.isArray(data.data.assets)) {
+            setAssets(data.data.assets);
+            saveStoredData(STORAGE_KEYS.ASSETS, data.data.assets);
+          }
+          if (Array.isArray(data.data.repairRecords)) {
+            setRepairRecords(data.data.repairRecords);
+            saveStoredData(STORAGE_KEYS.REPAIRS, data.data.repairRecords);
+          }
+          if (Array.isArray(data.data.planRecords)) {
+            setPlanRecords(data.data.planRecords);
+            saveStoredData(STORAGE_KEYS.PLANS, data.data.planRecords);
+          }
+          if (Array.isArray(data.data.cycleRules)) {
+            setCycleRules(data.data.cycleRules);
+            saveStoredData(STORAGE_KEYS.RULES, data.data.cycleRules);
+          }
+          if (Array.isArray(data.data.systemLogs)) {
+            setSystemLogs(data.data.systemLogs);
+            saveStoredData(STORAGE_KEYS.LOGS, data.data.systemLogs);
+          }
+          setLastSyncedAt(new Date().toISOString());
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Broadcast channel for same-origin tabs
   useEffect(() => {
     const handleStorageEvent = (e: StorageEvent) => {
       if (e.key && Object.values(STORAGE_KEYS).includes(e.key)) {
@@ -163,9 +262,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setLastSyncedAt(new Date().toISOString());
   };
 
-  const broadcastSync = () => {
+  const broadcastAndPushSync = (newAssets?: Asset[], newRepairs?: RepairRecord[], newPlans?: PlanRecord[], newRules?: CycleRule[], newLogs?: SystemLog[]) => {
     setLastSyncedAt(new Date().toISOString());
     if (syncChannel) syncChannel.postMessage('SYNC_ALL');
+
+    // Push to server immediately for instant cross-device sync (smartphone & web)
+    realtimeSync.pushUpdate({
+      assets: newAssets ?? assets,
+      repairRecords: newRepairs ?? repairRecords,
+      planRecords: newPlans ?? planRecords,
+      cycleRules: newRules ?? cycleRules,
+      systemLogs: newLogs ?? systemLogs,
+    });
   };
 
   // Sync state changes to storage
@@ -186,8 +294,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [cycleRules]);
 
   const forceSyncAll = () => {
-    forceSyncAllFromStorage();
-    broadcastSync();
+    realtimeSync.checkAndSyncNow().then(() => {
+      setLastSyncedAt(new Date().toISOString());
+    });
+    fetch('/api/sync/pull')
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.data) {
+          if (Array.isArray(res.data.assets)) setAssets(res.data.assets);
+          if (Array.isArray(res.data.repairRecords)) setRepairRecords(res.data.repairRecords);
+          if (Array.isArray(res.data.planRecords)) setPlanRecords(res.data.planRecords);
+          if (Array.isArray(res.data.cycleRules)) setCycleRules(res.data.cycleRules);
+          if (Array.isArray(res.data.systemLogs)) setSystemLogs(res.data.systemLogs);
+        }
+        setLastSyncedAt(new Date().toISOString());
+      })
+      .catch(() => {
+        forceSyncAllFromStorage();
+      });
+  };
+
+  const login = (user: AuthUser, token: string) => {
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+  };
+
+  const logout = () => {
+    clearStoredAuth();
+    setCurrentUser(null);
+    setIsAuthenticated(false);
   };
 
   const getAssetByCode = (code: string) => {
@@ -214,35 +349,40 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       ...data,
       assetCode: data.assetCode.trim(),
       updatedAt: new Date().toISOString(),
-      updatedBy: 'Cán bộ Kỹ thuật',
+      updatedBy: currentUser?.name || 'Cán bộ Kỹ thuật',
     };
 
-    setAssets((prev) => [newAsset, ...prev]);
-    logSystemAction('CREATE', 'ASSET', newAsset.assetCode, `Thêm mới tài sản: ${newAsset.assetName}`);
-    broadcastSync();
+    const nextAssets = [newAsset, ...assets];
+    setAssets(nextAssets);
+    const newLog = logSystemAction('CREATE', 'ASSET', newAsset.assetCode, `Thêm mới tài sản: ${newAsset.assetName}`);
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+
+    broadcastAndPushSync(nextAssets, repairRecords, planRecords, cycleRules, nextLogs);
     return true;
   };
 
   const updateAsset = (code: string, updates: Partial<Asset>): boolean => {
     let updated = false;
-    setAssets((prev) =>
-      prev.map((a) => {
-        if (a.assetCode.toUpperCase() === code.toUpperCase()) {
-          updated = true;
-          return {
-            ...a,
-            ...updates,
-            updatedAt: new Date().toISOString(),
-            updatedBy: 'Cán bộ Kỹ thuật',
-          };
-        }
-        return a;
-      })
-    );
+    const nextAssets = assets.map((a) => {
+      if (a.assetCode.toUpperCase() === code.toUpperCase()) {
+        updated = true;
+        return {
+          ...a,
+          ...updates,
+          updatedAt: new Date().toISOString(),
+          updatedBy: currentUser?.name || 'Cán bộ Kỹ thuật',
+        };
+      }
+      return a;
+    });
 
     if (updated) {
-      logSystemAction('UPDATE', 'ASSET', code, `Cập nhật thông tin tài sản: ${code}`);
-      broadcastSync();
+      setAssets(nextAssets);
+      const newLog = logSystemAction('UPDATE', 'ASSET', code, `Cập nhật thông tin tài sản: ${code}`);
+      const nextLogs = [newLog, ...systemLogs];
+      setSystemLogs(nextLogs);
+      broadcastAndPushSync(nextAssets, repairRecords, planRecords, cycleRules, nextLogs);
     }
     return updated;
   };
@@ -258,20 +398,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       code,
       `Chỉnh sửa chu kỳ riêng cho tài sản ${code}: ${years ?? 'mặc định'} năm`
     );
-    broadcastSync();
   };
 
   const deleteAsset = (code: string): boolean => {
     let deleted = false;
-    setAssets((prev) => {
-      const filtered = prev.filter((a) => a.assetCode.toUpperCase() !== code.toUpperCase());
-      if (filtered.length !== prev.length) deleted = true;
-      return filtered;
-    });
+    const nextAssets = assets.filter((a) => a.assetCode.toUpperCase() !== code.toUpperCase());
+    if (nextAssets.length !== assets.length) deleted = true;
 
     if (deleted) {
-      logSystemAction('DELETE', 'ASSET', code, `Xóa tài sản khỏi danh mục: ${code}`);
-      broadcastSync();
+      setAssets(nextAssets);
+      const newLog = logSystemAction('DELETE', 'ASSET', code, `Xóa tài sản khỏi danh mục: ${code}`);
+      const nextLogs = [newLog, ...systemLogs];
+      setSystemLogs(nextLogs);
+      broadcastAndPushSync(nextAssets, repairRecords, planRecords, cycleRules, nextLogs);
     }
     return deleted;
   };
@@ -285,33 +424,53 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updatedAt: new Date().toISOString(),
     };
 
-    setRepairRecords((prev) => [newRecord, ...prev]);
+    const nextRepairs = [newRecord, ...repairRecords];
+    setRepairRecords(nextRepairs);
 
+    let nextAssets = assets;
     if (newRecord.repairType === 'SCL' && newRecord.status === 'Completed') {
-      updateAsset(newRecord.assetCode, {
-        lastMajorRepairYear: newRecord.year,
-        lastMajorRepairDate: newRecord.endDate || newRecord.startDate,
-        lastMajorRepairContent: newRecord.workContent,
-        lastMajorRepairProject: newRecord.projectName,
+      nextAssets = assets.map((a) => {
+        if (a.assetCode.toUpperCase() === newRecord.assetCode.toUpperCase()) {
+          return {
+            ...a,
+            lastMajorRepairYear: newRecord.year,
+            lastMajorRepairDate: newRecord.endDate || newRecord.startDate,
+            lastMajorRepairContent: newRecord.workContent,
+            lastMajorRepairProject: newRecord.projectName,
+            updatedAt: new Date().toISOString(),
+            updatedBy: currentUser?.name || 'Cán bộ Kỹ thuật',
+          };
+        }
+        return a;
       });
+      setAssets(nextAssets);
     }
 
-    logSystemAction('CREATE', 'REPAIR', newRecord.id, `Thêm bản ghi SCL cho tài sản ${newRecord.assetCode} (Công trình: ${newRecord.projectName || 'Mặc định'})`);
-    broadcastSync();
+    const newLog = logSystemAction('CREATE', 'REPAIR', newRecord.id, `Thêm bản ghi SCL cho tài sản ${newRecord.assetCode} (Công trình: ${newRecord.projectName || 'Mặc định'})`);
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+
+    broadcastAndPushSync(nextAssets, nextRepairs, planRecords, cycleRules, nextLogs);
   };
 
   const updateRepairRecord = (id: string, updates: Partial<RepairRecord>) => {
-    setRepairRecords((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r))
+    const nextRepairs = repairRecords.map((r) =>
+      r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r
     );
-    logSystemAction('UPDATE', 'REPAIR', id, `Cập nhật bản ghi sửa chữa ${id}`);
-    broadcastSync();
+    setRepairRecords(nextRepairs);
+    const newLog = logSystemAction('UPDATE', 'REPAIR', id, `Cập nhật bản ghi sửa chữa ${id}`);
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+    broadcastAndPushSync(assets, nextRepairs, planRecords, cycleRules, nextLogs);
   };
 
   const deleteRepairRecord = (id: string) => {
-    setRepairRecords((prev) => prev.filter((r) => r.id !== id));
-    logSystemAction('DELETE', 'REPAIR', id, `Xóa bản ghi sửa chữa ${id}`);
-    broadcastSync();
+    const nextRepairs = repairRecords.filter((r) => r.id !== id);
+    setRepairRecords(nextRepairs);
+    const newLog = logSystemAction('DELETE', 'REPAIR', id, `Xóa bản ghi sửa chữa ${id}`);
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+    broadcastAndPushSync(assets, nextRepairs, planRecords, cycleRules, nextLogs);
   };
 
   // CRUD Plans
@@ -323,23 +482,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updatedAt: new Date().toISOString(),
     };
 
-    setPlanRecords((prev) => [newRecord, ...prev]);
-    logSystemAction('CREATE', 'PLAN', newRecord.id, `Thêm SCL vào Công trình "${newRecord.projectName}" năm ${newRecord.planYear} cho tài sản ${newRecord.assetCode}`);
-    broadcastSync();
+    const nextPlans = [newRecord, ...planRecords];
+    setPlanRecords(nextPlans);
+    const newLog = logSystemAction('CREATE', 'PLAN', newRecord.id, `Thêm SCL vào Công trình "${newRecord.projectName}" năm ${newRecord.planYear} cho tài sản ${newRecord.assetCode}`);
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+    broadcastAndPushSync(assets, repairRecords, nextPlans, cycleRules, nextLogs);
   };
 
   const updatePlanRecord = (id: string, updates: Partial<PlanRecord>) => {
-    setPlanRecords((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p))
+    const nextPlans = planRecords.map((p) =>
+      p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p
     );
-    logSystemAction('UPDATE', 'PLAN', id, `Cập nhật kế hoạch SCL ${id}`);
-    broadcastSync();
+    setPlanRecords(nextPlans);
+    const newLog = logSystemAction('UPDATE', 'PLAN', id, `Cập nhật kế hoạch SCL ${id}`);
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+    broadcastAndPushSync(assets, repairRecords, nextPlans, cycleRules, nextLogs);
   };
 
   const deletePlanRecord = (id: string) => {
-    setPlanRecords((prev) => prev.filter((p) => p.id !== id));
-    logSystemAction('DELETE', 'PLAN', id, `Xóa bản ghi kế hoạch ${id}`);
-    broadcastSync();
+    const nextPlans = planRecords.filter((p) => p.id !== id);
+    setPlanRecords(nextPlans);
+    const newLog = logSystemAction('DELETE', 'PLAN', id, `Xóa bản ghi kế hoạch ${id}`);
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+    broadcastAndPushSync(assets, repairRecords, nextPlans, cycleRules, nextLogs);
   };
 
   // CRUD Cycle Rules
@@ -348,30 +516,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       ...rule,
       id: `RULE-${Date.now()}`,
       updatedAt: new Date().toISOString(),
-      updatedBy: 'Cán bộ Quản trị',
+      updatedBy: currentUser?.name || 'Cán bộ Quản trị',
     };
 
-    setCycleRules((prev) => [newRule, ...prev]);
-    logSystemAction('CONFIG_CHANGE', 'RULE', newRule.id, `Tạo mới quy tắc chu kỳ bảo trì: ${newRule.groupName}`);
-    broadcastSync();
+    const nextRules = [newRule, ...cycleRules];
+    setCycleRules(nextRules);
+    const newLog = logSystemAction('CONFIG_CHANGE', 'RULE', newRule.id, `Tạo mới quy tắc chu kỳ bảo trì: ${newRule.groupName}`);
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+    broadcastAndPushSync(assets, repairRecords, planRecords, nextRules, nextLogs);
   };
 
   const updateCycleRule = (id: string, updates: Partial<CycleRule>) => {
-    setCycleRules((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? { ...r, ...updates, updatedAt: new Date().toISOString(), updatedBy: 'Cán bộ Quản trị' }
-          : r
-      )
+    const nextRules = cycleRules.map((r) =>
+      r.id === id
+        ? { ...r, ...updates, updatedAt: new Date().toISOString(), updatedBy: currentUser?.name || 'Cán bộ Quản trị' }
+        : r
     );
-    logSystemAction('CONFIG_CHANGE', 'RULE', id, `Cập nhật quy tắc chu kỳ bảo trì nhóm tài sản: ${id}`);
-    broadcastSync();
+    setCycleRules(nextRules);
+    const newLog = logSystemAction('CONFIG_CHANGE', 'RULE', id, `Cập nhật quy tắc chu kỳ bảo trì nhóm tài sản: ${id}`);
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+    broadcastAndPushSync(assets, repairRecords, planRecords, nextRules, nextLogs);
   };
 
   const deleteCycleRule = (id: string) => {
-    setCycleRules((prev) => prev.filter((r) => r.id !== id));
-    logSystemAction('CONFIG_CHANGE', 'RULE', id, `Xóa quy tắc chu kỳ bảo trì: ${id}`);
-    broadcastSync();
+    const nextRules = cycleRules.filter((r) => r.id !== id);
+    setCycleRules(nextRules);
+    const newLog = logSystemAction('CONFIG_CHANGE', 'RULE', id, `Xóa quy tắc chu kỳ bảo trì: ${id}`);
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+    broadcastAndPushSync(assets, repairRecords, planRecords, nextRules, nextLogs);
   };
 
   // Excel Batches
@@ -382,57 +557,63 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     let created = 0;
     let updated = 0;
 
-    setAssets((prev) => {
-      const assetMap = new Map(prev.map((a) => [a.assetCode.toUpperCase(), a]));
+    const assetMap = new Map(assets.map((a) => [a.assetCode.toUpperCase(), a]));
 
-      newAssets.forEach((incoming) => {
-        const key = incoming.assetCode.toUpperCase();
-        if (assetMap.has(key)) {
-          if (mergeMode !== 'CREATE') {
-            const existing = assetMap.get(key)!;
-            assetMap.set(key, {
-              ...existing,
-              ...incoming,
-              updatedAt: new Date().toISOString(),
-              updatedBy: 'Nhập từ Excel',
-            });
-            updated++;
-          }
-        } else {
+    newAssets.forEach((incoming) => {
+      const key = incoming.assetCode.toUpperCase();
+      if (assetMap.has(key)) {
+        if (mergeMode !== 'CREATE') {
+          const existing = assetMap.get(key)!;
           assetMap.set(key, {
+            ...existing,
             ...incoming,
             updatedAt: new Date().toISOString(),
-            updatedBy: 'Nhập từ Excel',
+            updatedBy: currentUser?.name || 'Nhập từ Excel',
           });
-          created++;
+          updated++;
         }
-      });
-
-      return Array.from(assetMap.values());
+      } else {
+        assetMap.set(key, {
+          ...incoming,
+          updatedAt: new Date().toISOString(),
+          updatedBy: currentUser?.name || 'Nhập từ Excel',
+        });
+        created++;
+      }
     });
 
-    logSystemAction(
+    const nextAssets = Array.from(assetMap.values());
+    setAssets(nextAssets);
+    const newLog = logSystemAction(
       'IMPORT_EXCEL',
       'ASSET',
       'BATCH',
       `Nhập Excel danh mục tài sản: thêm mới ${created}, cập nhật ${updated}`
     );
-    broadcastSync();
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+    broadcastAndPushSync(nextAssets, repairRecords, planRecords, cycleRules, nextLogs);
 
     return { created, updated };
   };
 
   const importRepairsBatch = (newRepairs: RepairRecord[]): number => {
-    setRepairRecords((prev) => [...newRepairs, ...prev]);
-    logSystemAction('IMPORT_EXCEL', 'REPAIR', 'BATCH', `Nhập Excel lịch sử sửa chữa: ${newRepairs.length} bản ghi`);
-    broadcastSync();
+    const nextRepairs = [...newRepairs, ...repairRecords];
+    setRepairRecords(nextRepairs);
+    const newLog = logSystemAction('IMPORT_EXCEL', 'REPAIR', 'BATCH', `Nhập Excel lịch sử sửa chữa: ${newRepairs.length} bản ghi`);
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+    broadcastAndPushSync(assets, nextRepairs, planRecords, cycleRules, nextLogs);
     return newRepairs.length;
   };
 
   const importPlansBatch = (newPlans: PlanRecord[]): number => {
-    setPlanRecords((prev) => [...newPlans, ...prev]);
-    logSystemAction('IMPORT_EXCEL', 'PLAN', 'BATCH', `Nhập Excel kế hoạch SCL: ${newPlans.length} bản ghi`);
-    broadcastSync();
+    const nextPlans = [...newPlans, ...planRecords];
+    setPlanRecords(nextPlans);
+    const newLog = logSystemAction('IMPORT_EXCEL', 'PLAN', 'BATCH', `Nhập Excel kế hoạch SCL: ${newPlans.length} bản ghi`);
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+    broadcastAndPushSync(assets, repairRecords, nextPlans, cycleRules, nextLogs);
     return newPlans.length;
   };
 
@@ -552,17 +733,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       },
     ];
 
-    setAssets((prev) => [...testAssets, ...prev]);
-    setRepairRecords((prev) => [...testRepairs, ...prev]);
-    setPlanRecords((prev) => [...testPlans, ...prev]);
+    const nextAssets = [...testAssets, ...assets];
+    const nextRepairs = [...testRepairs, ...repairRecords];
+    const nextPlans = [...testPlans, ...planRecords];
+    setAssets(nextAssets);
+    setRepairRecords(nextRepairs);
+    setPlanRecords(nextPlans);
 
-    logSystemAction(
+    const newLog = logSystemAction(
       'CREATE',
       'SYSTEM',
       'TEST_SCENARIOS',
       'Nạp thành công các kịch bản kiểm thử nghiệp vụ SCL EVN'
     );
-    broadcastSync();
+    const nextLogs = [newLog, ...systemLogs];
+    setSystemLogs(nextLogs);
+    broadcastAndPushSync(nextAssets, nextRepairs, nextPlans, cycleRules, nextLogs);
   };
 
   const resetToSeedData = () => {
@@ -579,7 +765,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     saveStoredData(STORAGE_KEYS.LOGS, SEED_LOGS);
 
     logSystemAction('RESTORE', 'SYSTEM', 'RESET', 'Khôi phục lại dữ liệu mẫu khởi tạo ban đầu');
-    broadcastSync();
+    broadcastAndPushSync(SEED_ASSETS, SEED_REPAIRS, SEED_PLANS, SEED_RULES, SEED_LOGS);
   };
 
   const exportAllDataJSON = (): string => {
@@ -609,7 +795,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (parsed.systemLogs) setSystemLogs(parsed.systemLogs);
 
         logSystemAction('RESTORE', 'SYSTEM', 'JSON', 'Khôi phục dữ liệu toàn bộ hệ thống từ file JSON');
-        broadcastSync();
+        broadcastAndPushSync(parsed.assets, parsed.repairRecords, parsed.planRecords, parsed.cycleRules, parsed.systemLogs);
         return true;
       }
       return false;
@@ -622,6 +808,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider
       value={{
+        currentUser,
+        isAuthenticated,
+        login,
+        logout,
+
         assets,
         repairRecords,
         planRecords,

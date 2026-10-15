@@ -172,15 +172,15 @@ export const PlanManager: React.FC = () => {
               placeholder="Tìm tên Công trình, mã tài sản..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-bold placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-3" />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-medium focus:outline-none"
+            className="bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="Approved">Đã phê duyệt</option>
@@ -316,14 +316,14 @@ export const PlanManager: React.FC = () => {
 
             <form onSubmit={handleAddPlanSubmit} className="space-y-3 text-xs">
               <div>
-                <label className="font-semibold text-slate-700">Tên Công trình * (Đầu mục):</label>
+                <label className="font-bold text-slate-900 block mb-1">Tên Công trình * (Đầu mục):</label>
                 <input
                   type="text"
                   placeholder="VD: Công trình SCL Trạm 110kV Chợ Lớn 2026..."
                   value={projectNameInput}
                   onChange={(e) => setProjectNameInput(e.target.value)}
                   required
-                  className="w-full mt-1 p-2 bg-slate-50 border rounded font-bold text-slate-900"
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   list="existing-projects"
                 />
                 <datalist id="existing-projects">
@@ -334,47 +334,47 @@ export const PlanManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700">Mã tài sản SCL *:</label>
+                <label className="font-bold text-slate-900 block mb-1">Mã tài sản SCL *:</label>
                 <input
                   type="text"
                   placeholder="VD: EVN-CL-MC22-01"
                   value={assetCodeInput}
                   onChange={(e) => setAssetCodeInput(e.target.value)}
                   required
-                  className="w-full mt-1 p-2 bg-slate-50 border rounded font-mono font-bold"
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-mono font-bold text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700">Nội dung công việc SCL dự kiến:</label>
+                <label className="font-bold text-slate-900 block mb-1">Nội dung công việc SCL dự kiến:</label>
                 <textarea
                   placeholder="Bảo dưỡng, thay thế bộ truyền động, nạp khí SF6..."
                   value={workContentInput}
                   onChange={(e) => setWorkContentInput(e.target.value)}
                   rows={2}
-                  className="w-full mt-1 p-2 bg-slate-50 border rounded"
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-slate-700">Dự toán kinh phí (VNĐ):</label>
+                  <label className="font-bold text-slate-900 block mb-1">Dự toán kinh phí (VNĐ):</label>
                   <input
                     type="number"
                     placeholder="185000000"
                     value={estimatedCostInput}
                     onChange={(e) => setEstimatedCostInput(e.target.value)}
-                    className="w-full mt-1 p-2 bg-slate-50 border rounded font-bold text-emerald-700"
+                    className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-emerald-700"
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-slate-700">Số quyết định phê duyệt:</label>
+                  <label className="font-bold text-slate-900 block mb-1">Số quyết định phê duyệt:</label>
                   <input
                     type="text"
                     placeholder="QĐ-8899/QĐ-EVNHCMC"
                     value={decisionNoInput}
                     onChange={(e) => setDecisionNoInput(e.target.value)}
-                    className="w-full mt-1 p-2 bg-slate-50 border rounded font-mono"
+                    className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-mono text-slate-900"
                   />
                 </div>
               </div>

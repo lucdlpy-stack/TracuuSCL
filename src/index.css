@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+/* 1. Prevent Mobile Auto-Zoom on Input Focus (iOS & Android) */
+@media screen and (max-width: 820px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+    touch-action: manipulation;
+  }
+}
+
+/* 2. Enforce Crisp Solid Black Text for All Search Inputs and Date Pickers */
+input[type="date"],
+input[type="search"],
+input[placeholder*="tìm" i],
+input[placeholder*="Tìm" i],
+input[placeholder*="tra cứu" i],
+input[placeholder*="Tra cứu" i],
+input[placeholder*="lọc" i],
+input[placeholder*="Lọc" i],
+.input-black-text {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-weight: 600 !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: contrast(1.8) brightness(0.2);
+}
+
 /* Custom Print Optimization Rules for Official EVN Reports & PDF Export */
 @media print {
   body {

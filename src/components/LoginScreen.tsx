@@ -163,13 +163,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               </div>
 
               <div>
-                <label className="font-bold text-slate-300 block mb-1">Email nội bộ:</label>
+                <label className="font-bold text-slate-300 block mb-1">
+                  Email khôi phục mật khẩu (nếu quên) *:
+                </label>
                 <input
                   type="email"
-                  placeholder="canbo@evn.com.vn"
+                  placeholder="canbo@evn.com.vn (dùng khôi phục MK)"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-base sm:text-xs"
                 />
               </div>
             </>
@@ -183,12 +185,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             <div className="relative">
               <input
                 type="text"
-                placeholder={isRegister ? 'Tên đăng nhập (viết liền)' : 'admin, kythuat, hoặc email...'}
+                placeholder={isRegister ? 'Tên đăng nhập (viết liền)' : 'luctt1, admin, kythuat, hoặc email...'}
                 value={account}
                 onChange={(e) => setAccount(e.target.value)}
                 required
                 autoComplete="username"
-                className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-base sm:text-xs"
               />
               <User className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
             </div>
@@ -209,7 +211,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete={isRegister ? 'new-password' : 'current-password'}
-                className="w-full pl-9 pr-10 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                className="w-full pl-9 pr-10 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-base sm:text-xs"
               />
               <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
               <button
@@ -292,24 +294,32 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           <div className="pt-2 border-t border-slate-800 space-y-2">
             <span className="text-[11px] text-slate-400 font-semibold block text-center flex items-center justify-center gap-1">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Chọn nhanh tài khoản mẫu EVN:
+              Tài khoản Admin & Cán bộ EVN mẫu:
             </span>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="grid grid-cols-3 gap-2 text-[11px]">
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('luctt1', 'Luctt12026')}
+                className="p-2 bg-blue-950/80 hover:bg-blue-900 rounded-xl border border-blue-700 text-left transition-colors"
+              >
+                <div className="font-extrabold text-amber-300 truncate">Admin: luctt1</div>
+                <div className="text-slate-300 text-[10px]">Pass: Luctt12026</div>
+              </button>
               <button
                 type="button"
                 onClick={() => handleQuickLogin('admin', 'EvnAdmin2026')}
                 className="p-2 bg-slate-800/80 hover:bg-slate-700 rounded-xl border border-slate-700 text-left transition-colors"
               >
-                <div className="font-bold text-amber-400">Quản trị viên (Admin)</div>
-                <div className="text-slate-400 text-[10px]">Pass: EvnAdmin2026</div>
+                <div className="font-bold text-amber-400 truncate">Quản trị viên</div>
+                <div className="text-slate-400 text-[10px]">Pass: EvnAdmin...</div>
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickLogin('kythuat', 'Kythuat2026')}
                 className="p-2 bg-slate-800/80 hover:bg-slate-700 rounded-xl border border-slate-700 text-left transition-colors"
               >
-                <div className="font-bold text-blue-400">Cán bộ Kỹ thuật</div>
-                <div className="text-slate-400 text-[10px]">Pass: Kythuat2026</div>
+                <div className="font-bold text-blue-400 truncate">Cán bộ KT</div>
+                <div className="text-slate-400 text-[10px]">Pass: Kythuat...</div>
               </button>
             </div>
           </div>

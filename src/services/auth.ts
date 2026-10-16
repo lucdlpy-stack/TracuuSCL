@@ -74,6 +74,23 @@ export async function loginUser(account: string, password: string): Promise<{ us
       // Check pre-configured demo credentials
       const normalized = account.trim().toLowerCase();
       if (
+        (normalized === 'luctt1' || normalized === 'luctt1@evn.com.vn') &&
+        (password === 'luctt1' || password === 'Luctt12026' || password === 'Luctt1')
+      ) {
+        const user: AuthUser = {
+          id: 'USR-000',
+          username: 'luctt1',
+          name: 'Trần Tấn Lực (Admin EVN)',
+          email: 'luctt1@evn.com.vn',
+          role: 'Admin',
+          unit: 'Công ty Điện lực Chợ Lớn',
+        };
+        const token = `EVN_TOKEN_${user.id}_${Date.now()}`;
+        setStoredAuth(token, user);
+        return { user, token };
+      }
+
+      if (
         (normalized === 'admin' || normalized === 'admin@evn.com.vn') &&
         password === 'EvnAdmin2026'
       ) {

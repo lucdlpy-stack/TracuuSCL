@@ -92,6 +92,18 @@ export const RepairHistoryManager: React.FC = () => {
     }));
   };
 
+  const handleExpandAll = () => {
+    setCollapsedProjects({});
+  };
+
+  const handleCollapseAll = () => {
+    const next: Record<string, boolean> = {};
+    projectNames.forEach((name) => {
+      next[name] = true;
+    });
+    setCollapsedProjects(next);
+  };
+
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!assetCode.trim() || !workContent.trim()) return;

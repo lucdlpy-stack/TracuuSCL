@@ -14,11 +14,9 @@ export const MobileTabBar: React.FC = () => {
 
   const tabs = [
     { id: 'home', label: 'Trang chủ', icon: Home },
-    { id: 'search', label: 'Tra cứu', icon: Search },
     { id: 'assets', label: 'Tài sản', icon: Database, badge: assets.length },
     { id: 'scl-plans', label: 'Công trình', icon: FolderGit2 },
     { id: 'cycle-warnings', label: 'Cảnh báo', icon: AlertTriangle, highlight: true },
-    { id: 'config-sync', label: 'Cài đặt', icon: Settings },
   ];
 
   return (

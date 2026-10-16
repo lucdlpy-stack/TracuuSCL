@@ -15,6 +15,7 @@ import {
   Zap,
   User,
   LogOut,
+  Settings,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -147,6 +148,16 @@ export const Header: React.FC<HeaderProps> = ({
                   isSyncing ? 'animate-spin text-amber-300' : 'hover:rotate-180'
                 }`}
               />
+            </button>
+
+            {/* Direct Cycle Config Button */}
+            <button
+              onClick={() => setActiveTab('config-sync')}
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-blue-900/80 hover:bg-blue-800 text-blue-200 border border-blue-600/80 rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+              title="Mở giao diện Cấu hình Chu kỳ bảo trì"
+            >
+              <Settings className="w-3.5 h-3.5 text-blue-300" />
+              <span className="hidden sm:inline">Cấu hình Chu kỳ</span>
             </button>
 
             {/* Smartphone PWA Install Button */}

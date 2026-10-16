@@ -24,6 +24,7 @@ export const PlanManager: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');
+  const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>({});
 
   // Form state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -60,6 +61,25 @@ export const PlanManager: React.FC = () => {
   }, {});
 
   const projectNames = Object.keys(groupedByProject);
+
+  const handleExpandAll = () => {
+    setCollapsedProjects({});
+  };
+
+  const handleCollapseAll = () => {
+    const next: Record<string, boolean> = {};
+    projectNames.forEach((name) => {
+      next[name] = true;
+    });
+    setCollapsedProjects(next);
+  };
+
+  const toggleProject = (name: string) => {
+    setCollapsedProjects((prev) => ({
+      ...prev,
+      [name]: !prev[name],
+    }));
+  };
 
   const handleAddPlanSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,6 +210,33 @@ export const PlanManager: React.FC = () => {
         </div>
       </div>
 
+      {/* Global Expand All / Collapse All Action Bar */}
+      {projectNames.length > 0 && (
+        <div className="flex items-center justify-between bg-slate-100 p-2.5 rounded-xl border border-slate-200 text-xs">
+          <div className="flex items-center space-x-2 font-bold text-slate-700">
+            <Building2 className="w-4 h-4 text-blue-600" />
+            <span>Tổng số {projectNames.length} Công trình SCL năm {selectedYear}</span>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleExpandAll}
+              className="flex items-center space-x-1 px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-700 font-bold border border-blue-200 rounded-lg shadow-sm transition-all"
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+              <span>Mở rộng tất cả</span>
+            </button>
+            <button
+              onClick={handleCollapseAll}
+              className="flex items-center space-x-1 px-3 py-1.5 bg-white hover:bg-slate-200 text-slate-700 font-bold border border-slate-300 rounded-lg shadow-sm transition-all"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+              <span>Thu gọn tất cả</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main List grouped by Công trình */}
       {projectNames.length === 0 ? (
         <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 text-slate-500 space-y-2">
@@ -204,6 +251,7 @@ export const PlanManager: React.FC = () => {
           {projectNames.map((projName, index) => {
             const projectItems = groupedByProject[projName];
             const totalProjectCost = projectItems.reduce((sum, item) => sum + (item.estimatedCost || 0), 0);
+            const isCollapsed = !!collapsedProjects[projName];
 
             return (
               <div
@@ -211,17 +259,36 @@ export const PlanManager: React.FC = () => {
                 className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
               >
                 {/* Công trình Block Header */}
-                <div className="bg-gradient-to-r from-slate-900 to-blue-950 text-white p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700">
+                <div
+                  onClick={() => toggleProject(projName)}
+                  className="bg-gradient-to-r from-slate-900 to-blue-950 hover:from-slate-850 hover:to-blue-900 text-white p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700 cursor-pointer select-none transition-colors"
+                >
                   <div className="flex items-start space-x-3">
                     <div className="w-8 h-8 rounded-lg bg-blue-600/80 flex items-center justify-center font-bold text-amber-300 text-sm border border-blue-400 shrink-0 mt-0.5">
                       {index + 1}
                     </div>
                     <div>
-                      <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-blue-300">
-                        CÔNG TRÌNH SCL NĂM {selectedYear}
-                      </span>
-                      <h3 className="text-base font-extrabold text-white leading-snug">
-                        {projName}
+                      <div className="flex items-center space-x-2">
+                        <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-blue-300">
+                          CÔNG TRÌNH SCL NĂM {selectedYear}
+                        </span>
+                        {isCollapsed ? (
+                          <span className="px-2 py-0.5 bg-slate-800 text-amber-300 text-[10px] rounded font-bold">
+                            Đang thu gọn
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-blue-900 text-blue-200 text-[10px] rounded font-bold">
+                            Đang mở rộng
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-base font-extrabold text-white leading-snug flex items-center gap-2">
+                        <span>{projName}</span>
+                        {isCollapsed ? (
+                          <ChevronRight className="w-4 h-4 text-amber-400" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-amber-400" />
+                        )}
                       </h3>
                       <p className="text-xs text-slate-300 mt-0.5">
                         Bao gồm <span className="font-bold text-amber-300">{projectItems.length}</span> tài sản/thiết bị thực hiện SCL
@@ -239,7 +306,8 @@ export const PlanManager: React.FC = () => {
                   )}
                 </div>
 
-                {/* Sub-table listing Assets under this Công trình */}
+                {/* Sub-table listing Assets under this Công trình (Hidden if collapsed) */}
+                {!isCollapsed && (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[11px]">
@@ -300,6 +368,7 @@ export const PlanManager: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
+                )}
               </div>
             );
           })}

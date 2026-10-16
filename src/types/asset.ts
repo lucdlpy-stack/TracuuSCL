@@ -185,6 +185,12 @@ export interface ExcelImportSummary {
   errorsList: Array<{ row: number; reason: string }>;
 }
 
+export interface UserPermissions {
+  canView: boolean;      // Quyền Xem
+  canEdit: boolean;      // Quyền Chỉnh sửa
+  canUpdate: boolean;    // Quyền Cập nhật / Thêm mới
+}
+
 export interface AuthUser {
   id: string;
   username: string;
@@ -192,6 +198,7 @@ export interface AuthUser {
   email: string;
   role: string;
   unit: string;
+  permissions?: UserPermissions;
 }
 
 export interface PasswordValidationResult {
@@ -201,4 +208,3 @@ export interface PasswordValidationResult {
   hasNumber: boolean;
   message?: string;
 }
-

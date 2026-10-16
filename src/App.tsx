@@ -12,6 +12,7 @@ import { ExcelImporter } from './components/ExcelImporter';
 import { ReportGenerator } from './components/ReportGenerator';
 import { ConfigSync } from './components/ConfigSync';
 import { CycleRulesManager } from './components/CycleRulesManager';
+import { UserPermissionsManager } from './components/UserPermissionsManager';
 import { AssetDetailModal } from './components/AssetDetailModal';
 import { MobileTabBar } from './components/MobileTabBar';
 import { LoginScreen } from './components/LoginScreen';
@@ -84,6 +85,8 @@ const AppContent: React.FC = () => {
             <ConfigSync />
           </div>
         )}
+
+        {activeTab === 'user-permissions' && <UserPermissionsManager />}
       </main>
 
       {/* Mobile Sticky Bottom Tab Bar */}
@@ -116,10 +119,12 @@ const AppContent: React.FC = () => {
   );
 };
 
-export default function App() {
+export function App() {
   return (
     <AppProvider>
       <AppContent />
     </AppProvider>
   );
 }
+
+export default App;

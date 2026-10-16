@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { formatShortDateTime } from '../utils/dateFormatter';
 import {
   RefreshCw,
   Calendar,
@@ -13,6 +14,8 @@ import {
   LogOut,
   Settings,
   KeyRound,
+  ShieldCheck,
+  Clock,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -29,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
     setCurrentYear,
     setActiveTab,
     isOnline,
+    lastSyncedAt,
     forceSyncAll,
     currentUser,
     logout,
@@ -45,13 +49,11 @@ export const Header: React.FC<HeaderProps> = ({
 
   // PWA Deferred Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showPwaBtn, setShowPwaBtn] = useState(false);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowPwaBtn(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -61,16 +63,18 @@ export const Header: React.FC<HeaderProps> = ({
   const handleInstallPwa = () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult: any) => {
-        if (choiceResult.outcome === 'accepted') {
-          setShowPwaBtn(false);
-        }
+      deferredPrompt.userChoice.then(() => {
         setDeferredPrompt(null);
       });
     } else {
       alert('Để cài đặt ứng dụng trên Điện thoại: Bấm vào biểu tượng Chia sẻ/Menu trình duyệt (••• hoặc Share) -> Chọn "Thêm vào Màn hình chính" (Add to Home Screen).');
     }
   };
+
+  // Strict Admin Check for luctt1 / Admin role
+  const isAdmin =
+    currentUser?.username?.toLowerCase() === 'luctt1' ||
+    currentUser?.role === 'Admin';
 
   return (
     <>
@@ -97,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Right Header Actions */}
             <div className="flex items-center space-x-2">
-              {/* Real-time Sync & Connectivity Badge */}
+              {/* Real-time Sync Badge with Timestamp */}
               <button
                 onClick={handleManualSync}
                 className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border shadow-sm transition-all cursor-pointer ${
@@ -105,22 +109,37 @@ export const Header: React.FC<HeaderProps> = ({
                     ? 'bg-emerald-950/80 border-emerald-600/80 text-emerald-300 hover:bg-emerald-900'
                     : 'bg-amber-950/80 border-amber-600/80 text-amber-300 hover:bg-amber-900'
                 }`}
-                title="Bấm để kích hoạt đồng bộ tức thì giữa Web & Smartphone ngay lập tức"
+                title={`Lần đồng bộ mới nhất: ${formatShortDateTime(lastSyncedAt)}`}
               >
                 {isOnline ? (
                   <Wifi className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
                 ) : (
                   <WifiOff className="w-3.5 h-3.5 text-amber-400" />
                 )}
-                <span className="hidden sm:inline">
-                  {isOnline ? 'Đồng bộ Realtime' : 'Ngoại tuyến'}
-                </span>
+                <div className="hidden sm:flex flex-col text-left leading-none">
+                  <span>{isOnline ? 'Đồng bộ Realtime' : 'Ngoại tuyến'}</span>
+                  <span className="text-[9px] text-emerald-400/80 font-normal mt-0.5">
+                    {formatShortDateTime(lastSyncedAt)}
+                  </span>
+                </div>
                 <RefreshCw
                   className={`w-3.5 h-3.5 text-slate-300 transition-transform ${
                     isSyncing ? 'animate-spin text-amber-300' : 'hover:rotate-180'
                   }`}
                 />
               </button>
+
+              {/* Direct User Permissions Button - ONLY VISIBLE TO ADMIN / luctt1 */}
+              {isAdmin && (
+                <button
+                  onClick={() => setActiveTab('user-permissions')}
+                  className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black shadow-md transition-all cursor-pointer animate-pulse"
+                  title="Mở giao diện Phân quyền Cán bộ & Quản lý Người dùng (Chỉ dành riêng cho Admin luctt1)"
+                >
+                  <ShieldCheck className="w-4 h-4 text-slate-950" />
+                  <span className="hidden sm:inline">Phân quyền Cán bộ</span>
+                </button>
+              )}
 
               {/* Direct Cycle Config Button */}
               <button
@@ -135,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Smartphone PWA Install Button */}
               <button
                 onClick={handleInstallPwa}
-                className="hidden lg:flex items-center space-x-1 px-2 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl text-xs font-black shadow transition-all shrink-0 cursor-pointer"
+                className="hidden lg:flex items-center space-x-1 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 rounded-xl text-xs font-bold shadow transition-all shrink-0 cursor-pointer"
                 title="Cài đặt Ứng dụng Sổ tay Tài sản EVN trên Điện thoại di động"
               >
                 <Smartphone className="w-3.5 h-3.5" />

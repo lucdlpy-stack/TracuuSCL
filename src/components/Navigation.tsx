@@ -9,10 +9,8 @@ import {
   Upload,
   BarChart3,
   Settings,
-  CalendarCheck,
   FolderGit2,
-  User,
-  LogOut,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -31,8 +29,12 @@ export const Navigation: React.FC<NavigationProps> = ({
     repairRecords,
     planRecords,
     currentUser,
-    logout,
   } = useApp();
+
+  // Strict Admin Check for luctt1 / Admin role
+  const isAdmin =
+    currentUser?.username?.toLowerCase() === 'luctt1' ||
+    currentUser?.role === 'Admin';
 
   const navItems = [
     { id: 'home', label: 'Trang chủ', icon: Home },
@@ -44,6 +46,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'excel-import', label: 'Nhập Excel', icon: Upload },
     { id: 'reports', label: 'Báo cáo & Xuất', icon: BarChart3 },
     { id: 'config-sync', label: 'Cấu hình Chu kỳ', icon: Settings },
+    ...(isAdmin ? [{ id: 'user-permissions', label: 'Phân quyền Cán bộ', icon: ShieldCheck, adminTab: true }] : []),
   ];
 
   const handleSelect = (id: string) => {
@@ -64,15 +67,17 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleSelect(item.id)}
-                  className={`flex items-center space-x-2 px-3.5 py-2 text-xs font-semibold rounded-lg whitespace-nowrap transition-all ${
+                  className={`flex items-center space-x-2 px-3.5 py-2 text-xs font-semibold rounded-lg whitespace-nowrap transition-all cursor-pointer ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-400'
+                      : item.adminTab
+                      ? 'bg-amber-950/80 text-amber-300 border border-amber-600/80 hover:bg-amber-900'
                       : item.highlight
                       ? 'text-amber-300 hover:bg-slate-700 hover:text-amber-200'
                       : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : item.highlight ? 'text-amber-400' : 'text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : item.adminTab ? 'text-amber-400' : item.highlight ? 'text-amber-400' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
                   {item.badge !== undefined && (
                     <span
@@ -102,61 +107,26 @@ export const Navigation: React.FC<NavigationProps> = ({
               <button
                 key={item.id}
                 onClick={() => handleSelect(item.id)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
                   isActive
-                    ? 'bg-blue-600 text-white font-semibold'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-blue-600 text-white'
+                    : item.adminTab
+                    ? 'bg-amber-950/80 text-amber-300 border border-amber-600/80'
+                    : 'text-slate-300 hover:bg-slate-800'
                 }`}
               >
-                <div className="flex items-center space-x-3">
-                  <Icon className="w-5 h-5 text-blue-400" />
+                <div className="flex items-center space-x-2.5">
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : item.adminTab ? 'text-amber-400' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
                 </div>
                 {item.badge !== undefined && (
-                  <span className="px-2 py-0.5 text-xs rounded-full bg-slate-800 text-slate-300 font-bold">
+                  <span className="px-2 py-0.5 text-[10px] rounded-full bg-slate-800 text-slate-300 font-bold">
                     {item.badge}
                   </span>
                 )}
               </button>
             );
           })}
-
-          {/* Mobile User Card & Logout */}
-          {currentUser && (
-            <div className="pt-3 mt-2 border-t border-slate-800 space-y-2">
-              <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white text-sm">
-                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">{currentUser.name}</div>
-                    <div className="text-[10px] text-blue-300">
-                      {currentUser.role === 'Admin'
-                        ? 'Quản trị viên'
-                        : currentUser.role === 'Technical'
-                        ? 'Kỹ sư Kỹ thuật'
-                        : 'Kỹ sư Vận hành'}{' '}
-                      • {currentUser.unit}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  if (window.confirm('Đồng chí có chắc chắn muốn đăng xuất khỏi ứng dụng?')) {
-                    setMobileMenuOpen(false);
-                    logout();
-                  }
-                }}
-                className="w-full flex items-center justify-center space-x-2 py-2.5 px-3 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-              >
-                <LogOut className="w-4 h-4 text-rose-400" />
-                <span>Đăng xuất khỏi hệ thống</span>
-              </button>
-            </div>
-          )}
         </div>
       )}
     </>

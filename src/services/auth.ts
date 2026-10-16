@@ -80,7 +80,7 @@ export async function loginUser(account: string, password: string): Promise<{ us
         const user: AuthUser = {
           id: 'USR-000',
           username: 'luctt1',
-          name: 'Trần Tấn Lực (Admin EVN)',
+          name: 'Tôn Tấn Lực',
           email: 'luctt1@evn.com.vn',
           role: 'Admin',
           unit: 'Công ty Điện lực Chợ Lớn',
@@ -97,7 +97,7 @@ export async function loginUser(account: string, password: string): Promise<{ us
         const user: AuthUser = {
           id: 'USR-001',
           username: 'admin',
-          name: 'Quản trị viên EVN',
+          name: 'Tôn Tấn Lực',
           email: 'admin@evn.com.vn',
           role: 'Admin',
           unit: 'Công ty Điện lực Chợ Lớn',

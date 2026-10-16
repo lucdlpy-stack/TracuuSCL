@@ -12,7 +12,6 @@ import {
   AlertCircle,
   Building2,
   ArrowRight,
-  Sparkles,
 } from 'lucide-react';
 
 interface LoginScreenProps {
@@ -27,7 +26,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
   // Register fields
   const [name, setName] = useState('');
-  const [unit, setUnit] = useState('Công ty Điện lực Chợ Lớn');
+  const [unit, setUnit] = useState('');
   const [email, setEmail] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -66,7 +65,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           name: name.trim(),
           email: email.trim() || `${account.trim()}@evn.com.vn`,
           password,
-          unit,
+          unit: unit.trim() || 'Cán bộ Điện lực',
         });
         onLoginSuccess(res.user, res.token);
       } else {
@@ -79,13 +78,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickLogin = (demoAcc: string, demoPass: string) => {
-    setAccount(demoAcc);
-    setPassword(demoPass);
-    setIsRegister(false);
-    setError(null);
   };
 
   return (
@@ -132,32 +124,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="VD: Nguyễn Văn Kỹ Thuật"
+                    placeholder="VD: Nguyễn Văn A..."
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-base sm:text-xs"
                   />
                   <User className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-300 block mb-1">Đơn vị quản lý:</label>
+                <label className="font-bold text-slate-300 block mb-1">
+                  Đơn vị quản lý (Nhập thủ công) *:
+                </label>
                 <div className="relative">
-                  <select
+                  <input
+                    type="text"
+                    placeholder="Nhập tên Đơn vị quản lý vận hành..."
                     value={unit}
                     onChange={(e) => setUnit(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                  >
-                    <option value="Công ty Điện lực Chợ Lớn">Công ty Điện lực Chợ Lớn</option>
-                    <option value="Công ty Điện lực Tân Thuận">Công ty Điện lực Tân Thuận</option>
-                    <option value="Công ty Điện lực Gia Định">Công ty Điện lực Gia Định</option>
-                    <option value="Công ty Điện lực Bình Phú">Công ty Điện lực Bình Phú</option>
-                    <option value="Công ty Truyền tải Điện 1">Công ty Truyền tải Điện 1</option>
-                    <option value="Công ty Truyền tải Điện 2">Công ty Truyền tải Điện 2</option>
-                    <option value="Ban Quản lý Dự án Lưới điện">Ban Quản lý Dự án Lưới điện</option>
-                  </select>
+                    required
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-base sm:text-xs"
+                  />
                   <Building2 className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
                 </div>
               </div>
@@ -185,7 +174,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             <div className="relative">
               <input
                 type="text"
-                placeholder={isRegister ? 'Tên đăng nhập (viết liền)' : 'luctt1, admin, kythuat, hoặc email...'}
+                placeholder={isRegister ? 'Tên đăng nhập (viết liền)' : 'Nhập tên tài khoản hoặc email...'}
                 value={account}
                 onChange={(e) => setAccount(e.target.value)}
                 required
@@ -288,42 +277,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               : 'Chưa có tài khoản cán bộ? Bấm vào đây để Đăng ký'}
           </button>
         </div>
-
-        {/* Quick Demo Login Preset Buttons for easy testing */}
-        {!isRegister && (
-          <div className="pt-2 border-t border-slate-800 space-y-2">
-            <span className="text-[11px] text-slate-400 font-semibold block text-center flex items-center justify-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Tài khoản Admin & Cán bộ EVN mẫu:
-            </span>
-            <div className="grid grid-cols-3 gap-2 text-[11px]">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('luctt1', 'Luctt12026')}
-                className="p-2 bg-blue-950/80 hover:bg-blue-900 rounded-xl border border-blue-700 text-left transition-colors"
-              >
-                <div className="font-extrabold text-amber-300 truncate">Admin: luctt1</div>
-                <div className="text-slate-300 text-[10px]">Pass: Luctt12026</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin', 'EvnAdmin2026')}
-                className="p-2 bg-slate-800/80 hover:bg-slate-700 rounded-xl border border-slate-700 text-left transition-colors"
-              >
-                <div className="font-bold text-amber-400 truncate">Quản trị viên</div>
-                <div className="text-slate-400 text-[10px]">Pass: EvnAdmin...</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('kythuat', 'Kythuat2026')}
-                className="p-2 bg-slate-800/80 hover:bg-slate-700 rounded-xl border border-slate-700 text-left transition-colors"
-              >
-                <div className="font-bold text-blue-400 truncate">Cán bộ KT</div>
-                <div className="text-slate-400 text-[10px]">Pass: Kythuat...</div>
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       <footer className="mt-8 text-center text-[11px] text-slate-500 space-y-1">

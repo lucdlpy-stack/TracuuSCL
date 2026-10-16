@@ -46,7 +46,7 @@ const INITIAL_USERS = [
   {
     id: 'USR-000',
     username: 'luctt1',
-    name: 'Trần Tấn Lực (Admin EVN)',
+    name: 'Tôn Tấn Lực',
     email: 'luctt1@evn.com.vn',
     passwordHash: 'Luctt12026', // also accepts luctt1
     role: 'Admin',
@@ -56,7 +56,7 @@ const INITIAL_USERS = [
   {
     id: 'USR-001',
     username: 'admin',
-    name: 'Quản trị viên EVN',
+    name: 'Tôn Tấn Lực',
     email: 'admin@evn.com.vn',
     passwordHash: 'EvnAdmin2026', // Contains letters and numbers
     role: 'Admin',
@@ -99,9 +99,18 @@ function loadDatabase(): DbSchema {
       const raw = fs.readFileSync(DB_FILE, 'utf-8');
       const data = JSON.parse(raw);
       if (data && Array.isArray(data.users)) {
-        // Ensure admin user luctt1 exists
-        if (!data.users.some((u: any) => u.username.toLowerCase() === 'luctt1')) {
+        // Ensure admin user luctt1 exists with name Tôn Tấn Lực
+        const lucttUser = data.users.find((u: any) => u.username.toLowerCase() === 'luctt1');
+        if (!lucttUser) {
           data.users.unshift(INITIAL_USERS[0]);
+          saveDatabase(data);
+        } else if (lucttUser.name !== 'Tôn Tấn Lực') {
+          lucttUser.name = 'Tôn Tấn Lực';
+          saveDatabase(data);
+        }
+        const adminUser = data.users.find((u: any) => u.username.toLowerCase() === 'admin');
+        if (adminUser && adminUser.name !== 'Tôn Tấn Lực') {
+          adminUser.name = 'Tôn Tấn Lực';
           saveDatabase(data);
         }
         // If assets are empty, populate with seed data so all devices get data immediately

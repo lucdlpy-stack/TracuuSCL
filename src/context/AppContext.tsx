@@ -26,6 +26,7 @@ import {
 } from '../services/cycleEngine';
 import { getStoredUser, clearStoredAuth, checkAuth } from '../services/auth';
 import { realtimeSync } from '../services/realtimeSync';
+import { firebaseSync } from '../services/firebaseSync';
 
 const STORAGE_KEYS = {
   ASSETS: 'evn_assets_db_v2',
@@ -159,8 +160,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, []);
 
-  // Real-time synchronization subscription (SSE Stream from server)
+  // Real-time synchronization subscription (Firebase Cloud Firestore + SSE Stream)
   useEffect(() => {
+    const unsubFirebase = firebaseSync.subscribe((remotePayload) => {
+      if (Array.isArray(remotePayload.assets) && remotePayload.assets.length > 0) {
+        setAssets(remotePayload.assets);
+        saveStoredData(STORAGE_KEYS.ASSETS, remotePayload.assets);
+      }
+      if (Array.isArray(remotePayload.repairRecords) && remotePayload.repairRecords.length > 0) {
+        setRepairRecords(remotePayload.repairRecords);
+        saveStoredData(STORAGE_KEYS.REPAIRS, remotePayload.repairRecords);
+      }
+      if (Array.isArray(remotePayload.planRecords) && remotePayload.planRecords.length > 0) {
+        setPlanRecords(remotePayload.planRecords);
+        saveStoredData(STORAGE_KEYS.PLANS, remotePayload.planRecords);
+      }
+      if (Array.isArray(remotePayload.cycleRules) && remotePayload.cycleRules.length > 0) {
+        setCycleRules(remotePayload.cycleRules);
+        saveStoredData(STORAGE_KEYS.RULES, remotePayload.cycleRules);
+      }
+      setLastSyncedAt(new Date().toISOString());
+    });
+
     const unsubscribe = realtimeSync.subscribe((remotePayload) => {
       if (Array.isArray(remotePayload.assets)) {
         setAssets(remotePayload.assets);
@@ -226,6 +247,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .catch(() => {});
 
     return () => {
+      unsubFirebase();
       unsubscribe();
     };
   }, []);
@@ -266,12 +288,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setLastSyncedAt(new Date().toISOString());
     if (syncChannel) syncChannel.postMessage('SYNC_ALL');
 
-    // Push to server immediately for instant cross-device sync (smartphone & web)
+    const targetAssets = newAssets ?? assets;
+    const targetRepairs = newRepairs ?? repairRecords;
+    const targetPlans = newPlans ?? planRecords;
+    const targetRules = newRules ?? cycleRules;
+
+    // Push to Cloud Firestore for permanent cross-device sync
+    firebaseSync.saveAllAssets(targetAssets);
+
+    // Push to server SSE channel immediately
     realtimeSync.pushUpdate({
-      assets: newAssets ?? assets,
-      repairRecords: newRepairs ?? repairRecords,
-      planRecords: newPlans ?? planRecords,
-      cycleRules: newRules ?? cycleRules,
+      assets: targetAssets,
+      repairRecords: targetRepairs,
+      planRecords: targetPlans,
+      cycleRules: targetRules,
       systemLogs: newLogs ?? systemLogs,
     });
   };
@@ -407,6 +437,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     if (deleted) {
       setAssets(nextAssets);
+      firebaseSync.deleteAsset(code);
       const newLog = logSystemAction('DELETE', 'ASSET', code, `Xóa tài sản khỏi danh mục: ${code}`);
       const nextLogs = [newLog, ...systemLogs];
       setSystemLogs(nextLogs);
@@ -426,6 +457,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const nextRepairs = [newRecord, ...repairRecords];
     setRepairRecords(nextRepairs);
+    firebaseSync.saveRepair(newRecord);
 
     let nextAssets = assets;
     if (newRecord.repairType === 'SCL' && newRecord.status === 'Completed') {
@@ -458,6 +490,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r
     );
     setRepairRecords(nextRepairs);
+    const updatedRecord = nextRepairs.find((r) => r.id === id);
+    if (updatedRecord) firebaseSync.saveRepair(updatedRecord);
+
     const newLog = logSystemAction('UPDATE', 'REPAIR', id, `Cập nhật bản ghi sửa chữa ${id}`);
     const nextLogs = [newLog, ...systemLogs];
     setSystemLogs(nextLogs);
@@ -467,6 +502,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const deleteRepairRecord = (id: string) => {
     const nextRepairs = repairRecords.filter((r) => r.id !== id);
     setRepairRecords(nextRepairs);
+    firebaseSync.deleteRepair(id);
+
     const newLog = logSystemAction('DELETE', 'REPAIR', id, `Xóa bản ghi sửa chữa ${id}`);
     const nextLogs = [newLog, ...systemLogs];
     setSystemLogs(nextLogs);
@@ -484,6 +521,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const nextPlans = [newRecord, ...planRecords];
     setPlanRecords(nextPlans);
+    firebaseSync.savePlan(newRecord);
+
     const newLog = logSystemAction('CREATE', 'PLAN', newRecord.id, `Thêm SCL vào Công trình "${newRecord.projectName}" năm ${newRecord.planYear} cho tài sản ${newRecord.assetCode}`);
     const nextLogs = [newLog, ...systemLogs];
     setSystemLogs(nextLogs);
@@ -495,6 +534,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p
     );
     setPlanRecords(nextPlans);
+    const updatedPlan = nextPlans.find((p) => p.id === id);
+    if (updatedPlan) firebaseSync.savePlan(updatedPlan);
+
     const newLog = logSystemAction('UPDATE', 'PLAN', id, `Cập nhật kế hoạch SCL ${id}`);
     const nextLogs = [newLog, ...systemLogs];
     setSystemLogs(nextLogs);
@@ -504,6 +546,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const deletePlanRecord = (id: string) => {
     const nextPlans = planRecords.filter((p) => p.id !== id);
     setPlanRecords(nextPlans);
+    firebaseSync.deletePlan(id);
+
     const newLog = logSystemAction('DELETE', 'PLAN', id, `Xóa bản ghi kế hoạch ${id}`);
     const nextLogs = [newLog, ...systemLogs];
     setSystemLogs(nextLogs);
@@ -521,6 +565,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const nextRules = [newRule, ...cycleRules];
     setCycleRules(nextRules);
+    firebaseSync.saveCycleRule(newRule);
+
     const newLog = logSystemAction('CONFIG_CHANGE', 'RULE', newRule.id, `Tạo mới quy tắc chu kỳ bảo trì: ${newRule.groupName}`);
     const nextLogs = [newLog, ...systemLogs];
     setSystemLogs(nextLogs);
@@ -534,6 +580,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         : r
     );
     setCycleRules(nextRules);
+    const updatedRule = nextRules.find((r) => r.id === id);
+    if (updatedRule) firebaseSync.saveCycleRule(updatedRule);
+
     const newLog = logSystemAction('CONFIG_CHANGE', 'RULE', id, `Cập nhật quy tắc chu kỳ bảo trì nhóm tài sản: ${id}`);
     const nextLogs = [newLog, ...systemLogs];
     setSystemLogs(nextLogs);
@@ -543,6 +592,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const deleteCycleRule = (id: string) => {
     const nextRules = cycleRules.filter((r) => r.id !== id);
     setCycleRules(nextRules);
+    firebaseSync.deleteCycleRule(id);
+
     const newLog = logSystemAction('CONFIG_CHANGE', 'RULE', id, `Xóa quy tắc chu kỳ bảo trì: ${id}`);
     const nextLogs = [newLog, ...systemLogs];
     setSystemLogs(nextLogs);

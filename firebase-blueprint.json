@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "Asset": {
+      "title": "Asset",
+      "description": "EVN equipment and assets",
+      "type": "object",
+      "properties": {
+        "assetCode": { "type": "string", "description": "Unique asset code" },
+        "assetName": { "type": "string", "description": "Asset description name" },
+        "category": { "type": "string", "description": "Category group" },
+        "unit": { "type": "string", "description": "Operating management unit" },
+        "location": { "type": "string", "description": "Installation location" },
+        "quantity": { "type": "number", "description": "Asset quantity" },
+        "commissioningYear": { "type": "number", "description": "Commissioning year" },
+        "customCycleYears": { "type": "number", "description": "Custom SCL cycle in years" },
+        "notes": { "type": "string", "description": "Additional notes" },
+        "updatedAt": { "type": "string", "description": "Last update timestamp" }
+      },
+      "required": ["assetCode", "assetName", "category", "unit", "commissioningYear"]
+    },
+    "RepairRecord": {
+      "title": "RepairRecord",
+      "description": "Major repair (SCL) and maintenance history records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique record ID" },
+        "assetCode": { "type": "string", "description": "Associated asset code" },
+        "repairType": { "type": "string", "description": "SCL, SCTX, SCDX, DaiTu" },
+        "projectName": { "type": "string", "description": "Work/Project name" },
+        "year": { "type": "number", "description": "Year performed" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "workContent": { "type": "string", "description": "Detailed description of work" },
+        "contractor": { "type": "string" },
+        "decisionNo": { "type": "string" },
+        "cost": { "type": "number" },
+        "acceptanceResult": { "type": "string" },
+        "status": { "type": "string" },
+        "dataSource": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "assetCode", "workContent", "year"]
+    },
+    "PlanRecord": {
+      "title": "PlanRecord",
+      "description": "Future SCL project plans for assets",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "assetCode": { "type": "string" },
+        "planYear": { "type": "number" },
+        "planCode": { "type": "string" },
+        "projectName": { "type": "string" },
+        "workContent": { "type": "string" },
+        "proposedUnit": { "type": "string" },
+        "proposedDate": { "type": "string" },
+        "decisionNo": { "type": "string" },
+        "estimatedCost": { "type": "number" },
+        "status": { "type": "string" },
+        "dataSource": { "type": "string" }
+      },
+      "required": ["id", "assetCode", "planYear", "projectName"]
+    },
+    "CycleRule": {
+      "title": "CycleRule",
+      "description": "Maintenance cycle and warning threshold rules",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "groupName": { "type": "string" },
+        "category": { "type": "string" },
+        "cycleYears": { "type": "number" },
+        "cycleMonths": { "type": "number" },
+        "basisWorkType": { "type": "string" },
+        "ruleMode": { "type": "string" },
+        "documentNo": { "type": "string" },
+        "documentSource": { "type": "string" },
+        "effectiveDate": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "groupName", "category", "cycleYears", "ruleMode"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Authenticated officer account profiles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "passwordHash": { "type": "string" },
+        "role": { "type": "string" },
+        "unit": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "username", "name"]
+    }
+  },
+  "firestore": {
+    "/assets/{assetCode}": {
+      "schema": { "$ref": "#/entities/Asset" },
+      "description": "EVN asset catalog documents"
+    },
+    "/repairRecords/{recordId}": {
+      "schema": { "$ref": "#/entities/RepairRecord" },
+      "description": "Repair and maintenance history records"
+    },
+    "/planRecords/{planId}": {
+      "schema": { "$ref": "#/entities/PlanRecord" },
+      "description": "SCL plan records grouped by project"
+    },
+    "/cycleRules/{ruleId}": {
+      "schema": { "$ref": "#/entities/CycleRule" },
+      "description": "Maintenance cycle warning rules"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Authorized user profiles"
+    }
+  }
+}

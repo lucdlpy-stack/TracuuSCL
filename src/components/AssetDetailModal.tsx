@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { RepairRecord } from '../types/asset';
+import { formatVietnameseDateTime } from '../utils/dateFormatter';
 import {
   X,
   Building2,
@@ -91,7 +92,11 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ assetCode, o
   );
   assetPlans.sort((a, b) => b.planYear - a.planYear);
 
-  const assetLogs = systemLogs.filter((l) => l.targetId.toUpperCase() === asset.assetCode.toUpperCase());
+  const assetLogs = systemLogs.filter(
+    (l) =>
+      l.targetId.toUpperCase() === asset.assetCode.toUpperCase() ||
+      l.details.toUpperCase().includes(asset.assetCode.toUpperCase())
+  );
 
   const handleSaveCycle = () => {
     setAssetCustomCycle(asset.assetCode, customYearsInput);
@@ -563,19 +568,44 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ assetCode, o
 
           {/* TAB 5: LOGS */}
           {activeTab === 'logs' && (
-            <div className="space-y-3 text-xs">
-              <h3 className="font-bold text-sm text-slate-800">Nhật ký Biến động Dữ liệu</h3>
+            <div className="space-y-4 text-xs">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm text-slate-800 flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  <span>Nhật ký Lịch sử Chỉnh sửa & Biến động Dữ liệu</span>
+                </h3>
+                <span className="text-[11px] text-slate-500 font-semibold">
+                  Tổng số: <strong className="text-blue-700">{assetLogs.length}</strong> bản ghi nhật ký
+                </span>
+              </div>
+
               {assetLogs.length === 0 ? (
-                <p className="text-slate-500">Chưa có nhật ký thay đổi riêng cho tài sản này.</p>
+                <div className="p-8 text-center text-slate-500 bg-slate-50 rounded-xl border">
+                  Chưa có nhật ký thay đổi riêng cho tài sản này. Tất cả các đợt chỉnh sửa mới sẽ tự động được ghi nhận tại đây.
+                </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {assetLogs.map((log) => (
-                    <div key={log.id} className="p-3 bg-slate-50 border rounded-lg space-y-1">
-                      <div className="flex justify-between text-slate-500">
-                        <span>{new Date(log.timestamp).toLocaleString('vi-VN')}</span>
-                        <span className="font-bold text-blue-600">{log.user}</span>
+                    <div
+                      key={log.id}
+                      className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 shadow-sm hover:border-blue-300 transition-colors"
+                    >
+                      <div className="flex items-center justify-between text-slate-600 flex-wrap gap-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-extrabold text-blue-900 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded text-[10px]">
+                            {log.action}
+                          </span>
+                          <span className="font-bold text-slate-800">
+                            Cán bộ: <span className="text-blue-700">{log.user || 'Tôn Tấn Lực'}</span>
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-mono font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          {formatVietnameseDateTime(log.timestamp)}
+                        </span>
                       </div>
-                      <p className="font-semibold text-slate-800">{log.details}</p>
+                      <p className="font-semibold text-slate-900 text-xs leading-relaxed">
+                        {log.details}
+                      </p>
                     </div>
                   ))}
                 </div>

@@ -493,18 +493,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const updatedRecord = nextRepairs.find((r) => r.id === id);
     if (updatedRecord) firebaseSync.saveRepair(updatedRecord);
 
-    const newLog = logSystemAction('UPDATE', 'REPAIR', id, `Cập nhật bản ghi sửa chữa ${id}`);
+    const assetCode = updatedRecord?.assetCode || id;
+    const editor = currentUser?.name || 'Tôn Tấn Lực';
+    const newLog = logSystemAction(
+      'UPDATE',
+      'REPAIR',
+      assetCode,
+      `Cập nhật bản ghi SCL cho tài sản ${assetCode}: Công trình: "${updatedRecord?.projectName}", NND công việc: "${updatedRecord?.workContent}", Số QĐ: "${updatedRecord?.decisionNo || 'N/A'}"`,
+      editor
+    );
     const nextLogs = [newLog, ...systemLogs];
     setSystemLogs(nextLogs);
     broadcastAndPushSync(assets, nextRepairs, planRecords, cycleRules, nextLogs);
   };
 
   const deleteRepairRecord = (id: string) => {
+    const recordToDelete = repairRecords.find((r) => r.id === id);
     const nextRepairs = repairRecords.filter((r) => r.id !== id);
     setRepairRecords(nextRepairs);
     firebaseSync.deleteRepair(id);
 
-    const newLog = logSystemAction('DELETE', 'REPAIR', id, `Xóa bản ghi sửa chữa ${id}`);
+    const assetCode = recordToDelete?.assetCode || id;
+    const editor = currentUser?.name || 'Tôn Tấn Lực';
+    const newLog = logSystemAction(
+      'DELETE',
+      'REPAIR',
+      assetCode,
+      `Xóa bản ghi SCL của tài sản ${assetCode} (Công trình: ${recordToDelete?.projectName || id})`,
+      editor
+    );
     const nextLogs = [newLog, ...systemLogs];
     setSystemLogs(nextLogs);
     broadcastAndPushSync(assets, nextRepairs, planRecords, cycleRules, nextLogs);
@@ -523,7 +540,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setPlanRecords(nextPlans);
     firebaseSync.savePlan(newRecord);
 
-    const newLog = logSystemAction('CREATE', 'PLAN', newRecord.id, `Thêm SCL vào Công trình "${newRecord.projectName}" năm ${newRecord.planYear} cho tài sản ${newRecord.assetCode}`);
+    const editor = currentUser?.name || 'Tôn Tấn Lực';
+    const newLog = logSystemAction(
+      'CREATE',
+      'PLAN',
+      newRecord.assetCode,
+      `Thêm SCL vào Công trình "${newRecord.projectName}" năm ${newRecord.planYear} cho tài sản ${newRecord.assetCode}`,
+      editor
+    );
     const nextLogs = [newLog, ...systemLogs];
     setSystemLogs(nextLogs);
     broadcastAndPushSync(assets, repairRecords, nextPlans, cycleRules, nextLogs);
@@ -537,7 +561,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const updatedPlan = nextPlans.find((p) => p.id === id);
     if (updatedPlan) firebaseSync.savePlan(updatedPlan);
 
-    const newLog = logSystemAction('UPDATE', 'PLAN', id, `Cập nhật kế hoạch SCL ${id}`);
+    const assetCode = updatedPlan?.assetCode || id;
+    const editor = currentUser?.name || 'Tôn Tấn Lực';
+    const newLog = logSystemAction(
+      'UPDATE',
+      'PLAN',
+      assetCode,
+      `Cập nhật Kế hoạch SCL cho tài sản ${assetCode}: Công trình: "${updatedPlan?.projectName}", NND: "${updatedPlan?.workContent || 'N/A'}", Số QĐ: "${updatedPlan?.decisionNo || 'N/A'}"`,
+      editor
+    );
     const nextLogs = [newLog, ...systemLogs];
     setSystemLogs(nextLogs);
     broadcastAndPushSync(assets, repairRecords, nextPlans, cycleRules, nextLogs);

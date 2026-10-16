@@ -11,6 +11,7 @@ import {
   Search,
   Lock,
   Clock,
+  Trash2,
 } from 'lucide-react';
 
 export const UserPermissionsManager: React.FC = () => {
@@ -149,6 +150,32 @@ export const UserPermissionsManager: React.FC = () => {
     );
   };
 
+  const handleDeleteUser = async (userId: string, targetName: string, targetUsername: string) => {
+    if (targetUsername.toLowerCase() === 'luctt1') {
+      alert('Không thể xóa tài khoản Quản trị viên tối cao (luctt1 - Tôn Tấn Lực).');
+      return;
+    }
+
+    if (window.confirm(`Đồng chí có chắc chắn muốn XÓA tài khoản cán bộ "${targetName}" (@${targetUsername}) khỏi hệ thống EVN?`)) {
+      const updated = users.filter((u) => u.id !== userId);
+      setUsers(updated);
+      localStorage.setItem('evn_users_permissions_db_v1', JSON.stringify(updated));
+
+      try {
+        await fetch('/api/users/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId }),
+        });
+      } catch {
+        // deleted locally
+      }
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    }
+  };
+
   const handleSaveChanges = async () => {
     const nowISO = new Date().toISOString();
     setLastUpdatedTime(nowISO);
@@ -247,10 +274,10 @@ export const UserPermissionsManager: React.FC = () => {
             <span>Bảo mật Phân quyền • Tôn Tấn Lực (luctt1 - Admin EVN)</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-            Quản Lý Tài Khoản Nguồn Nhân Lực & Tích Chọn Phân Quyền
+            Quản Lý Tài Khoản Nguồn Nhân Lực & Xóa / Tích Chọn Phân Quyền
           </h2>
           <p className="text-xs text-blue-200/90 mt-1">
-            Quản trị viên được phép tích chọn phân quyền <span className="text-emerald-300 font-bold">Xem</span>, <span className="text-amber-300 font-bold">Chỉnh sửa</span>, hoặc <span className="text-blue-300 font-bold">Thêm mới/Cập nhật</span> cho từng người dùng.
+            Quản trị viên có thể <span className="text-rose-300 font-bold">Xóa tài khoản không còn sử dụng</span> hoặc tích chọn phân quyền <span className="text-emerald-300 font-bold">Xem</span>, <span className="text-amber-300 font-bold">Chỉnh sửa</span>, <span className="text-blue-300 font-bold">Thêm mới/Cập nhật</span>.
           </p>
         </div>
 
@@ -277,7 +304,7 @@ export const UserPermissionsManager: React.FC = () => {
         <div className="p-4 bg-emerald-950/90 border border-emerald-700 text-emerald-200 text-xs font-bold rounded-2xl flex items-center justify-between shadow-lg animate-bounce">
           <div className="flex items-center space-x-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-            <span>Đã lưu thành công cấu hình phân quyền người dùng cho toàn bộ hệ thống!</span>
+            <span>Đã cập nhật danh sách người dùng & phân quyền thành công!</span>
           </div>
           <div className="text-[11px] text-emerald-300/90 font-mono flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" />
@@ -317,7 +344,7 @@ export const UserPermissionsManager: React.FC = () => {
                 <th className="p-3.5 text-center">👁️ Quyền Xem</th>
                 <th className="p-3.5 text-center">✏️ Quyền Chỉnh sửa</th>
                 <th className="p-3.5 text-center">➕ Quyền Cập nhật/Thêm mới</th>
-                <th className="p-3.5 text-right">Trạng thái</th>
+                <th className="p-3.5 text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
@@ -328,9 +355,7 @@ export const UserPermissionsManager: React.FC = () => {
                   canUpdate: true,
                 };
 
-                const isTargetAdmin =
-                  user.username.toLowerCase() === 'luctt1' ||
-                  user.role === 'Admin';
+                const isTargetAdmin = user.username.toLowerCase() === 'luctt1';
 
                 return (
                   <tr key={user.id} className="hover:bg-slate-800/50 transition-colors">
@@ -410,11 +435,22 @@ export const UserPermissionsManager: React.FC = () => {
                       </label>
                     </td>
 
-                    {/* Status Badge */}
+                    {/* Actions: Delete User */}
                     <td className="p-3.5 text-right font-bold">
-                      <span className="px-2.5 py-1 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-full text-[10px]">
-                        Hoạt động
-                      </span>
+                      {isTargetAdmin ? (
+                        <span className="px-2.5 py-1 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-full text-[10px]">
+                          Admin Tối cao
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.name, user.username)}
+                          className="px-2.5 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800 rounded-xl text-xs font-bold transition-all flex items-center space-x-1 ml-auto cursor-pointer"
+                          title="Xóa người dùng không còn sử dụng"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                          <span>Xóa</span>
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

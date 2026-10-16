@@ -9,14 +9,15 @@ import {
   Search,
   Trash2,
   FolderGit2,
-  Building2,
-  Calendar,
   ChevronDown,
   ChevronUp,
   Wrench,
   DollarSign,
   Eye,
-  CheckCircle2,
+  Edit2,
+  X,
+  FileCheck,
+  Pencil,
 } from 'lucide-react';
 
 export const RepairHistoryManager: React.FC = () => {
@@ -25,6 +26,7 @@ export const RepairHistoryManager: React.FC = () => {
     assets,
     deleteRepairRecord,
     addRepairRecord,
+    updateRepairRecord,
     setSelectedAssetCode,
   } = useApp();
 
@@ -33,7 +35,7 @@ export const RepairHistoryManager: React.FC = () => {
   const [yearFilter, setYearFilter] = useState<string>('ALL');
   const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>({});
 
-  // Form modal state
+  // Form add modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [assetCode, setAssetCode] = useState('');
   const [repairType, setRepairType] = useState<RepairRecord['repairType']>('SCL');
@@ -45,6 +47,25 @@ export const RepairHistoryManager: React.FC = () => {
   const [contractor, setContractor] = useState('');
   const [decisionNo, setDecisionNo] = useState('');
   const [cost, setCost] = useState('');
+
+  // Form edit item modal state
+  const [editingRepair, setEditingRepair] = useState<RepairRecord | null>(null);
+  const [editWorkContent, setEditWorkContent] = useState('');
+  const [editProjectName, setEditProjectName] = useState('');
+  const [editContractor, setEditContractor] = useState('');
+  const [editYear, setEditYear] = useState<number>(new Date().getFullYear());
+  const [editCost, setEditCost] = useState('');
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [editRepairType, setEditRepairType] = useState<RepairRecord['repairType']>('SCL');
+
+  // Form state - Edit Project Header modal (Tên công trình & Số QĐ)
+  const [editingProjectHeader, setEditingProjectHeader] = useState<{
+    oldName: string;
+    items: RepairRecord[];
+  } | null>(null);
+  const [headerNewName, setHeaderNewName] = useState('');
+  const [headerNewDecisionNo, setHeaderNewDecisionNo] = useState('');
 
   // Filter repair records
   const filteredRepairs = repairRecords.filter((repair) => {
@@ -58,6 +79,7 @@ export const RepairHistoryManager: React.FC = () => {
         repair.assetCode.toLowerCase().includes(q) ||
         repair.workContent.toLowerCase().includes(q) ||
         (repair.projectName && repair.projectName.toLowerCase().includes(q)) ||
+        (repair.decisionNo && repair.decisionNo.toLowerCase().includes(q)) ||
         (repair.contractor && repair.contractor.toLowerCase().includes(q)) ||
         (asset && asset.assetName.toLowerCase().includes(q))
       );
@@ -92,18 +114,6 @@ export const RepairHistoryManager: React.FC = () => {
     }));
   };
 
-  const handleExpandAll = () => {
-    setCollapsedProjects({});
-  };
-
-  const handleCollapseAll = () => {
-    const next: Record<string, boolean> = {};
-    projectNames.forEach((name) => {
-      next[name] = true;
-    });
-    setCollapsedProjects(next);
-  };
-
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!assetCode.trim() || !workContent.trim()) return;
@@ -133,11 +143,70 @@ export const RepairHistoryManager: React.FC = () => {
     setCost('');
   };
 
+  const handleOpenEdit = (repair: RepairRecord) => {
+    setEditingRepair(repair);
+    setEditWorkContent(repair.workContent || '');
+    setEditProjectName(repair.projectName || '');
+    setEditContractor(repair.contractor || '');
+    setEditYear(repair.year);
+    setEditCost(repair.cost ? String(repair.cost) : '');
+    setEditStartDate(repair.startDate || '');
+    setEditEndDate(repair.endDate || '');
+    setEditRepairType(repair.repairType);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRepair) return;
+
+    updateRepairRecord(editingRepair.id, {
+      workContent: editWorkContent.trim(),
+      projectName: editProjectName.trim() || editingRepair.projectName,
+      contractor: editContractor.trim() || undefined,
+      year: editYear,
+      cost: editCost ? Number(editCost) : undefined,
+      startDate: editStartDate || undefined,
+      endDate: editEndDate || undefined,
+      repairType: editRepairType,
+    });
+
+    setEditingRepair(null);
+  };
+
+  // Open Edit Project Header
+  const handleOpenEditProjectHeader = (projName: string, items: RepairRecord[], e: React.MouseEvent) => {
+    e.stopPropagation();
+    const existingDecNo = items.find((i) => i.decisionNo)?.decisionNo || '';
+    setEditingProjectHeader({ oldName: projName, items });
+    setHeaderNewName(projName);
+    setHeaderNewDecisionNo(existingDecNo);
+  };
+
+  // Save Project Header Rename & Decision No
+  const handleSaveProjectHeader = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProjectHeader || !headerNewName.trim()) return;
+
+    const { items } = editingProjectHeader;
+    const trimmedName = headerNewName.trim();
+    const trimmedDecNo = headerNewDecisionNo.trim();
+
+    items.forEach((item) => {
+      updateRepairRecord(item.id, {
+        projectName: trimmedName,
+        decisionNo: trimmedDecNo || undefined,
+      });
+    });
+
+    setEditingProjectHeader(null);
+  };
+
   const handleExportRepairsExcel = () => {
     const exportData = filteredRepairs.map((r) => {
       const asset = assets.find((a) => a.assetCode === r.assetCode);
       return {
         'Tên Công trình SCL': r.projectName || 'Mặc định',
+        'Số quyết định': r.decisionNo || '',
         'Mã tài sản': r.assetCode,
         'Tên tài sản': asset?.assetName || '',
         'Loại tài sản': asset?.category || '',
@@ -147,8 +216,7 @@ export const RepairHistoryManager: React.FC = () => {
         'Ngày hoàn thành': r.endDate || r.startDate || '',
         'Nội dung công việc': r.workContent,
         'Đơn vị thực hiện': r.contractor || '',
-        'Chi phí (VNĐ)': r.cost || 0,
-        'Số quyết định': r.decisionNo || '',
+        'Chi phí kinh phí (VNĐ)': r.cost || 0,
         'Nghiệm thu': r.acceptanceResult || 'Đã nghiệm thu',
         'Nguồn dữ liệu': r.dataSource,
       };
@@ -170,7 +238,7 @@ export const RepairHistoryManager: React.FC = () => {
             Lịch sử Sửa chữa Phân loại theo Từng Công trình
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Đầu mục thể hiện Tên Công trình trước, bên trong liệt kê các mã tài sản được sửa chữa theo từng công trình.
+            Đầu mục thể hiện Tên Công trình, Số Quyết định & Tổng chi phí. Cho phép sửa Tên Công trình & Số QĐ tại Đầu mục.
           </p>
         </div>
 
@@ -219,7 +287,7 @@ export const RepairHistoryManager: React.FC = () => {
             <DollarSign className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] font-semibold text-slate-500 uppercase">Tổng Giá trị Chi phí SCL</span>
+            <span className="text-[11px] font-semibold text-slate-500 uppercase">Tổng Kinh phí Chi phí SCL</span>
             <div className="text-xl font-black text-emerald-700">
               {totalCostAll > 0 ? `${(totalCostAll / 1_000_000).toFixed(1)} tr đ` : '0 đ'}
             </div>
@@ -227,13 +295,13 @@ export const RepairHistoryManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Bar with Solid Black Text on White Background */}
+      {/* Filter Bar */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-3 text-xs items-center">
-        {/* Search Input with Solid Black Text */}
+        {/* Search Input */}
         <div className="relative flex-1 min-w-[240px]">
           <input
             type="text"
-            placeholder="Tìm kiếm Tên Công trình, mã tài sản, nội dung SCL..."
+            placeholder="Tìm kiếm Tên Công trình, số QĐ, mã tài sản, nội dung SCL..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-8 py-2 bg-white text-slate-900 font-bold placeholder:text-slate-500 text-xs rounded-xl border border-slate-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -255,7 +323,7 @@ export const RepairHistoryManager: React.FC = () => {
           <select
             value={yearFilter}
             onChange={(e) => setYearFilter(e.target.value)}
-            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
             <option value="ALL">-- Tất cả các năm --</option>
             {availableYears.map((yr) => (
@@ -272,7 +340,7 @@ export const RepairHistoryManager: React.FC = () => {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
             <option value="ALL">-- Tất cả loại SCL --</option>
             <option value="SCL">SCL (Sửa chữa lớn)</option>
@@ -286,7 +354,7 @@ export const RepairHistoryManager: React.FC = () => {
         <div className="ml-auto flex items-center space-x-2">
           <button
             onClick={() => setCollapsedProjects({})}
-            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold"
+            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"
           >
             Mở rộng tất cả
           </button>
@@ -295,7 +363,7 @@ export const RepairHistoryManager: React.FC = () => {
               const allCollapsed = projectNames.reduce((acc, p) => ({ ...acc, [p]: true }), {});
               setCollapsedProjects(allCollapsed);
             }}
-            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold"
+            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"
           >
             Thu gọn tất cả
           </button>
@@ -322,12 +390,17 @@ export const RepairHistoryManager: React.FC = () => {
               new Set(repairsInProject.map((r) => r.contractor).filter(Boolean))
             );
 
+            // Extract unique Decision Numbers for this project header
+            const decisionNumbers = Array.from(
+              new Set(repairsInProject.map((r) => r.decisionNo).filter(Boolean))
+            );
+
             return (
               <div
                 key={projName}
                 className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all"
               >
-                {/* Project Header Bar (Đầu mục thể hiện Tên Công Trình) */}
+                {/* Project Header Bar with Decision No & Rename Action */}
                 <div
                   onClick={() => toggleProject(projName)}
                   className="p-4 bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:brightness-110 transition-all select-none"
@@ -341,10 +414,34 @@ export const RepairHistoryManager: React.FC = () => {
                         <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-600 text-white">
                           Công trình SCL
                         </span>
+
+                        {/* SỐ QUYẾT ĐỊNH HIỂN THỊ NỔI BẬT TẠI ĐẦU MỤC CÔNG TRÌNH */}
+                        <span className="text-[11px] font-mono font-extrabold text-amber-300 bg-amber-950/80 border border-amber-600 px-2.5 py-0.5 rounded flex items-center gap-1 shadow-sm">
+                          <FileCheck className="w-3.5 h-3.5 text-amber-400" />
+                          <span>
+                            {decisionNumbers.length > 0
+                              ? `Số QĐ: ${decisionNumbers.join(', ')}`
+                              : 'Chưa có số QĐ'}
+                          </span>
+                        </span>
+                      </div>
+
+                      <div className="flex items-center space-x-2 mt-1 flex-wrap">
                         <h3 className="text-sm sm:text-base font-extrabold text-white tracking-wide">
                           {projName}
                         </h3>
+
+                        {/* Button Edit Project Name & Decision Number at Header */}
+                        <button
+                          onClick={(e) => handleOpenEditProjectHeader(projName, repairsInProject, e)}
+                          className="px-2 py-0.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-black rounded-lg shadow flex items-center space-x-1 cursor-pointer transition-all"
+                          title="Sửa Tên Công trình & Số Quyết định cho toàn bộ Công trình này"
+                        >
+                          <Pencil className="w-3 h-3 text-slate-950" />
+                          <span>Sửa Tên & Số QĐ</span>
+                        </button>
                       </div>
+
                       <div className="flex items-center space-x-3 text-xs text-blue-200/90 mt-1 flex-wrap gap-y-1">
                         <span>
                           Năm: <strong>{projectYears.join(', ')}</strong>
@@ -354,24 +451,25 @@ export const RepairHistoryManager: React.FC = () => {
                             • Đơn vị thi công: <strong>{contractorNames.join(', ')}</strong>
                           </span>
                         )}
+                        <span>• <strong>{repairsInProject.length}</strong> mã tài sản</span>
                       </div>
                     </div>
                   </div>
 
+                  {/* Single Prominent Total Cost Banner for the Construction Work */}
                   <div className="flex items-center space-x-3 shrink-0 self-end sm:self-center">
-                    <div className="text-right">
-                      <div className="text-xs font-bold text-amber-300">
-                        {repairsInProject.length} mã tài sản
-                      </div>
-                      {projectCost > 0 && (
-                        <div className="text-[11px] text-emerald-300 font-extrabold">
-                          {projectCost.toLocaleString('vi-VN')} đ
-                        </div>
-                      )}
+                    <div className="text-right bg-blue-900/80 px-4 py-2 rounded-xl border border-blue-600/80 shadow-inner">
+                      <span className="text-[10px] text-blue-200 font-bold block uppercase tracking-wide">
+                        TỔNG CHI PHÍ THỰC HIỆN CÔNG TRÌNH:
+                      </span>
+                      <span className="font-extrabold text-amber-300 text-base sm:text-lg">
+                        {projectCost > 0 ? `${projectCost.toLocaleString('vi-VN')} đ` : 'Chưa cập nhật kinh phí'}
+                      </span>
                     </div>
+
                     <button
                       type="button"
-                      className="p-1 rounded-lg bg-blue-900/60 hover:bg-blue-800 text-white"
+                      className="p-1.5 rounded-lg bg-blue-900/60 hover:bg-blue-800 text-white cursor-pointer"
                       title={isCollapsed ? 'Mở rộng công trình' : 'Thu gọn công trình'}
                     >
                       {isCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
@@ -379,20 +477,19 @@ export const RepairHistoryManager: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Sub-table: Assets repaired under this specific project */}
+                {/* Sub-table: Assets repaired under this specific project (Decision No column removed) */}
                 {!isCollapsed && (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[11px] border-b border-slate-200">
                         <tr>
-                          <th className="p-3 w-32">Mã tài sản</th>
+                          <th className="p-3 w-36">Mã tài sản</th>
                           <th className="p-3">Tên tài sản & Chủng loại</th>
                           <th className="p-3 w-28">Loại SCL</th>
                           <th className="p-3 w-28">Năm / Ngày</th>
                           <th className="p-3">Nội dung công việc sửa chữa</th>
                           <th className="p-3 w-36">Đơn vị thực hiện</th>
-                          <th className="p-3 w-32">Chi phí (VNĐ)</th>
-                          <th className="p-3 w-24 text-right">Thao tác</th>
+                          <th className="p-3 w-28 text-right">Thao tác</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -443,11 +540,6 @@ export const RepairHistoryManager: React.FC = () => {
                               {/* Work Content */}
                               <td className="p-3 text-slate-800 font-medium">
                                 <div>{repair.workContent}</div>
-                                {repair.decisionNo && (
-                                  <span className="text-[10px] text-slate-500 block">
-                                    Số QĐ: {repair.decisionNo}
-                                  </span>
-                                )}
                               </td>
 
                               {/* Contractor */}
@@ -455,12 +547,7 @@ export const RepairHistoryManager: React.FC = () => {
                                 {repair.contractor || '-'}
                               </td>
 
-                              {/* Cost */}
-                              <td className="p-3 font-bold text-emerald-700 whitespace-nowrap">
-                                {repair.cost ? `${repair.cost.toLocaleString('vi-VN')} đ` : '-'}
-                              </td>
-
-                              {/* Actions */}
+                              {/* Actions: Eye, Edit, Delete */}
                               <td className="p-3 text-right whitespace-nowrap">
                                 <div className="flex items-center justify-end space-x-1">
                                   <button
@@ -469,6 +556,13 @@ export const RepairHistoryManager: React.FC = () => {
                                     title="Xem thông tin chi tiết tài sản"
                                   >
                                     <Eye className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenEdit(repair)}
+                                    className="p-1.5 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors cursor-pointer"
+                                    title="Chỉnh sửa nội dung công việc SCL"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
                                   </button>
                                   <button
                                     onClick={() => {
@@ -496,7 +590,203 @@ export const RepairHistoryManager: React.FC = () => {
         </div>
       )}
 
-      {/* Modal: Khai báo Bản ghi Lịch sử SCL Mới với chữ màu đen và ô ngày tháng chuẩn */}
+      {/* Modal Edit Project Header (Tên công trình & Số QĐ) */}
+      {editingProjectHeader && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-200">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-amber-600" />
+                <span>Sửa Tên Công Trình & Số Quyết Định SCL</span>
+              </h3>
+              <button
+                onClick={() => setEditingProjectHeader(null)}
+                className="text-slate-400 hover:text-slate-700 font-bold cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProjectHeader} className="space-y-4 text-xs">
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">
+                  Tên Công trình SCL mới *:
+                </label>
+                <input
+                  type="text"
+                  value={headerNewName}
+                  onChange={(e) => setHeaderNewName(e.target.value)}
+                  required
+                  placeholder="Nhập lại tên công trình chuẩn xác..."
+                  className="w-full p-3 bg-white border border-slate-300 rounded-xl font-extrabold text-slate-900 text-xs focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  Cập nhật tên mới sẽ tự động áp dụng cho tất cả {editingProjectHeader.items.length} mã tài sản trong công trình này.
+                </span>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">
+                  Số quyết định phê duyệt (Đầu mục):
+                </label>
+                <input
+                  type="text"
+                  value={headerNewDecisionNo}
+                  onChange={(e) => setHeaderNewDecisionNo(e.target.value)}
+                  placeholder="VD: QĐ-1425/QĐ-PCCL"
+                  className="w-full p-3 bg-white border border-slate-300 rounded-xl font-mono font-bold text-slate-900 text-xs focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setEditingProjectHeader(null)}
+                  className="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow cursor-pointer"
+                >
+                  Lưu Tên mới & Số QĐ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Repair Record Item */}
+      {editingRepair && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Edit2 className="w-5 h-5 text-amber-600" />
+                Chỉnh sửa Bản ghi SCL của Tài sản {editingRepair.assetCode}
+              </h3>
+              <button
+                onClick={() => setEditingRepair(null)}
+                className="text-slate-400 hover:text-slate-700 text-lg font-bold cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">Tên Công trình SCL *:</label>
+                <input
+                  type="text"
+                  value={editProjectName}
+                  onChange={(e) => setEditProjectName(e.target.value)}
+                  required
+                  className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-bold focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-900 block mb-1">Loại sửa chữa:</label>
+                  <select
+                    value={editRepairType}
+                    onChange={(e) => setEditRepairType(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-bold focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="SCL">SCL (Sửa chữa lớn)</option>
+                    <option value="SCTX">SCTX (Thường xuyên)</option>
+                    <option value="SCDX">SCDX (Đột xuất)</option>
+                    <option value="DaiTu">Đại tu thiết bị</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-900 block mb-1">Năm thực hiện *:</label>
+                  <input
+                    type="number"
+                    value={editYear}
+                    onChange={(e) => setEditYear(Number(e.target.value))}
+                    required
+                    className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-bold focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-900 block mb-1">Ngày bắt đầu:</label>
+                  <input
+                    type="date"
+                    value={editStartDate}
+                    onChange={(e) => setEditStartDate(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-semibold focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-900 block mb-1">Ngày hoàn thành:</label>
+                  <input
+                    type="date"
+                    value={editEndDate}
+                    onChange={(e) => setEditEndDate(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-semibold focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">Nội dung công việc sửa chữa *:</label>
+                <textarea
+                  value={editWorkContent}
+                  onChange={(e) => setEditWorkContent(e.target.value)}
+                  required
+                  rows={3}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-900 block mb-1">Đơn vị thực hiện:</label>
+                  <input
+                    type="text"
+                    value={editContractor}
+                    onChange={(e) => setEditContractor(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-900 block mb-1">Kinh phí (VNĐ):</label>
+                  <input
+                    type="number"
+                    value={editCost}
+                    onChange={(e) => setEditCost(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingRepair(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow cursor-pointer"
+                >
+                  Cập nhật Thay đổi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Khai báo Bản ghi Lịch sử SCL Mới */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-200 max-h-[90vh] overflow-y-auto">
@@ -514,7 +804,6 @@ export const RepairHistoryManager: React.FC = () => {
             </div>
 
             <form onSubmit={handleAddSubmit} className="space-y-3.5 text-xs">
-              {/* Tên Công Trình SCL */}
               <div>
                 <label className="font-bold text-slate-900 block mb-1">
                   Tên Công trình SCL *:
@@ -533,12 +822,8 @@ export const RepairHistoryManager: React.FC = () => {
                     <option key={p} value={p} />
                   ))}
                 </datalist>
-                <span className="text-[10px] text-slate-500 mt-0.5 block">
-                  Có thể chọn tên công trình đã có hoặc nhập tên công trình mới.
-                </span>
               </div>
 
-              {/* Mã tài sản */}
               <div>
                 <label className="font-bold text-slate-900 block mb-1">
                   Mã tài sản sửa chữa *:
@@ -561,7 +846,6 @@ export const RepairHistoryManager: React.FC = () => {
                 </datalist>
               </div>
 
-              {/* Loại & Năm thực hiện */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-slate-900 block mb-1">Loại sửa chữa:</label>
@@ -588,7 +872,6 @@ export const RepairHistoryManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Ngày tháng (Chữ màu đen rõ ràng) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-slate-900 block mb-1">Ngày bắt đầu:</label>
@@ -610,7 +893,6 @@ export const RepairHistoryManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Nội dung công việc */}
               <div>
                 <label className="font-bold text-slate-900 block mb-1">Nội dung sửa chữa chi tiết *:</label>
                 <textarea
@@ -623,7 +905,6 @@ export const RepairHistoryManager: React.FC = () => {
                 />
               </div>
 
-              {/* Đơn vị thực hiện & Chi phí & Quyết định */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="font-bold text-slate-900 block mb-1">Đơn vị thực hiện:</label>
@@ -657,7 +938,6 @@ export const RepairHistoryManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Buttons */}
               <div className="flex justify-end space-x-2 pt-3 border-t border-slate-200">
                 <button
                   type="button"

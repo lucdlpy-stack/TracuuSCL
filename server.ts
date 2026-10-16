@@ -1,45 +1,12 @@
 import express, { Request, Response } from 'express';
-import { createServer as createViteServer } from 'vite';
-import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import path from 'path';
 
 const app = express();
-const port = 3000;
-
 app.use(express.json({ limit: '50mb' }));
 
-const DATA_DIR = path.resolve(__dirname, 'data');
-const DB_FILE = path.join(DATA_DIR, 'db.json');
-
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-// In-memory data store structure
-interface DbSchema {
-  version: number;
-  lastUpdated: number;
-  users: Array<{
-    id: string;
-    username: string;
-    name: string;
-    email: string;
-    passwordHash: string;
-    role: string;
-    unit: string;
-    createdAt: string;
-  }>;
-  assets: any[];
-  repairRecords: any[];
-  planRecords: any[];
-  cycleRules: any[];
-  systemLogs: any[];
-}
+const PORT = process.env.PORT || 3000;
+const DB_FILE = path.join(process.cwd(), 'db.json');
 
 // Initial seed users
 const INITIAL_USERS = [
@@ -51,102 +18,106 @@ const INITIAL_USERS = [
     passwordHash: 'Luctt12026', // also accepts luctt1
     role: 'Admin',
     unit: 'Công ty Điện lực Chợ Lớn',
-    createdAt: new Date().toISOString(),
+    permissions: { canView: true, canEdit: true, canUpdate: true },
   },
   {
     id: 'USR-001',
     username: 'admin',
     name: 'Tôn Tấn Lực',
     email: 'admin@evn.com.vn',
-    passwordHash: 'EvnAdmin2026', // Contains letters and numbers
+    passwordHash: 'EvnAdmin2026',
     role: 'Admin',
     unit: 'Công ty Điện lực Chợ Lớn',
-    createdAt: new Date().toISOString(),
+    permissions: { canView: true, canEdit: true, canUpdate: true },
   },
   {
     id: 'USR-002',
     username: 'kythuat',
     name: 'Kỹ sư Quản lý Kỹ thuật',
     email: 'kythuat@evn.com.vn',
-    passwordHash: 'Kythuat2026', // Contains letters and numbers
+    passwordHash: 'Kythuat2026',
     role: 'Technical',
     unit: 'Công ty Điện lực Chợ Lớn',
-    createdAt: new Date().toISOString(),
+    permissions: { canView: true, canEdit: true, canUpdate: true },
   },
   {
     id: 'USR-003',
     username: 'vanhanh',
     name: 'Kỹ sư Quản lý Vận hành',
     email: 'vanhanh@evn.com.vn',
-    passwordHash: 'Vanhanh2026', // Contains letters and numbers
+    passwordHash: 'Vanhanh2026',
     role: 'Operator',
     unit: 'Công ty Điện lực Tân Thuận',
-    createdAt: new Date().toISOString(),
+    permissions: { canView: true, canEdit: true, canUpdate: false },
   },
 ];
 
-import {
-  SEED_ASSETS,
-  SEED_REPAIRS,
-  SEED_PLANS,
-  SEED_RULES,
-  SEED_LOGS,
-} from './src/services/storage';
+type DB = {
+  users: any[];
+  assets: any[];
+  repairRecords: any[];
+  planRecords: any[];
+  cycleRules: any[];
+  systemLogs: any[];
+  lastUpdated: string;
+};
 
-function loadDatabase(): DbSchema {
+function loadDatabase(): DB {
   try {
     if (fs.existsSync(DB_FILE)) {
       const raw = fs.readFileSync(DB_FILE, 'utf-8');
-      const data = JSON.parse(raw);
-      if (data && Array.isArray(data.users)) {
-        // Ensure admin user luctt1 exists with name Tôn Tấn Lực
-        const lucttUser = data.users.find((u: any) => u.username.toLowerCase() === 'luctt1');
-        if (!lucttUser) {
-          data.users.unshift(INITIAL_USERS[0]);
-          saveDatabase(data);
-        } else if (lucttUser.name !== 'Tôn Tấn Lực') {
-          lucttUser.name = 'Tôn Tấn Lực';
-          saveDatabase(data);
+      const loaded = JSON.parse(raw);
+
+      // Ensure Admin luctt1 exists
+      if (!loaded.users || !Array.isArray(loaded.users)) {
+        loaded.users = INITIAL_USERS;
+      } else {
+        const luctt1Exists = loaded.users.some(
+          (u: any) => u.username && u.username.toLowerCase() === 'luctt1'
+        );
+        if (!luctt1Exists) {
+          loaded.users.unshift(INITIAL_USERS[0]);
+        } else {
+          // ensure name is Tôn Tấn Lực
+          const adminUser = loaded.users.find(
+            (u: any) => u.username && u.username.toLowerCase() === 'luctt1'
+          );
+          if (adminUser) {
+            adminUser.name = 'Tôn Tấn Lực';
+            adminUser.role = 'Admin';
+            adminUser.permissions = { canView: true, canEdit: true, canUpdate: true };
+          }
         }
-        const adminUser = data.users.find((u: any) => u.username.toLowerCase() === 'admin');
-        if (adminUser && adminUser.name !== 'Tôn Tấn Lực') {
-          adminUser.name = 'Tôn Tấn Lực';
-          saveDatabase(data);
-        }
-        // If assets are empty, populate with seed data so all devices get data immediately
-        if (!Array.isArray(data.assets) || data.assets.length === 0) {
-          data.assets = SEED_ASSETS;
-          data.repairRecords = SEED_REPAIRS;
-          data.planRecords = SEED_PLANS;
-          data.cycleRules = SEED_RULES;
-          data.systemLogs = SEED_LOGS;
-          saveDatabase(data);
-        }
-        return data;
       }
+
+      return {
+        users: loaded.users || INITIAL_USERS,
+        assets: loaded.assets || [],
+        repairRecords: loaded.repairRecords || [],
+        planRecords: loaded.planRecords || [],
+        cycleRules: loaded.cycleRules || [],
+        systemLogs: loaded.systemLogs || [],
+        lastUpdated: loaded.lastUpdated || new Date().toISOString(),
+      };
     }
   } catch (err) {
-    console.error('Failed to read db.json, creating new database:', err);
+    console.error('Error loading db.json:', err);
   }
 
-  // Create initial database with pre-populated EVN data
-  const defaultDb: DbSchema = {
-    version: 2,
-    lastUpdated: Date.now(),
+  return {
     users: INITIAL_USERS,
-    assets: SEED_ASSETS,
-    repairRecords: SEED_REPAIRS,
-    planRecords: SEED_PLANS,
-    cycleRules: SEED_RULES,
-    systemLogs: SEED_LOGS,
+    assets: [],
+    repairRecords: [],
+    planRecords: [],
+    cycleRules: [],
+    systemLogs: [],
+    lastUpdated: new Date().toISOString(),
   };
-  saveDatabase(defaultDb);
-  return defaultDb;
 }
 
-function saveDatabase(db: DbSchema) {
+function saveDatabase(db: DB) {
   try {
-    db.lastUpdated = Date.now();
+    db.lastUpdated = new Date().toISOString();
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
   } catch (err) {
     console.error('Failed to save db.json:', err);
@@ -171,14 +142,12 @@ function broadcastToClients(data: any) {
       if (typeof (client.res as any).flush === 'function') {
         (client.res as any).flush();
       }
-    } catch (e) {
-      // client disconnected
+    } catch {
       sseClients.splice(i, 1);
     }
   }
 }
 
-// Password validation: must contain both letters and numbers, length >= 6
 function validatePassword(password: string): { valid: boolean; message?: string } {
   if (!password || password.length < 6) {
     return { valid: false, message: 'Mật khẩu phải có tối thiểu 6 ký tự.' };
@@ -193,8 +162,8 @@ function validatePassword(password: string): { valid: boolean; message?: string 
 
 // ======================== AUTH ROUTES ========================
 
-// POST /api/auth/login
 app.post('/api/auth/login', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
   const { account, password } = req.body;
   if (!account || !password) {
     return res.status(400).json({ error: 'Vui lòng nhập tài khoản và mật khẩu.' });
@@ -208,13 +177,12 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   const isPasswordValid =
     user &&
     (user.passwordHash === password ||
-      (normalized === 'luctt1' && (password === 'luctt1' || password === 'Luctt12026')));
+      (normalized === 'luctt1' && (password === 'luctt1' || password === 'Luctt12026' || password === 'Luctt1')));
 
   if (!user || !isPasswordValid) {
     return res.status(401).json({ error: 'Tài khoản hoặc mật khẩu không chính xác.' });
   }
 
-  // Create simple session token
   const token = `EVN_TOKEN_${user.id}_${Date.now()}`;
   const userResponse = {
     id: user.id,
@@ -223,13 +191,14 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     email: user.email,
     role: user.role,
     unit: user.unit,
+    permissions: user.permissions || { canView: true, canEdit: true, canUpdate: true },
   };
 
   return res.json({ token, user: userResponse });
 });
 
-// POST /api/auth/register
 app.post('/api/auth/register', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
   const { username, name, email, password, unit } = req.body;
 
   if (!username || !password || !name) {
@@ -254,6 +223,7 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
     passwordHash: password,
     role: 'Engineer',
     unit: unit?.trim() || 'Công ty Điện lực Chợ Lớn',
+    permissions: { canView: true, canEdit: true, canUpdate: true },
     createdAt: new Date().toISOString(),
   };
 
@@ -270,12 +240,13 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
       email: newUser.email,
       role: newUser.role,
       unit: newUser.unit,
+      permissions: newUser.permissions,
     },
   });
 });
 
-// GET /api/auth/me
 app.get('/api/auth/me', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Chưa đăng nhập.' });
@@ -301,18 +272,31 @@ app.get('/api/auth/me', (req: Request, res: Response) => {
       email: user.email,
       role: user.role,
       unit: user.unit,
+      permissions: user.permissions || { canView: true, canEdit: true, canUpdate: true },
     },
   });
 });
 
-// POST /api/auth/change-password
 app.post('/api/auth/change-password', (req: Request, res: Response) => {
-  const { userId, oldPassword, newPassword } = req.body;
-  const user = db.users.find((u) => u.id === userId);
+  res.setHeader('Content-Type', 'application/json');
+  const { userId, username, oldPassword, newPassword } = req.body;
+  const normalized = (username || '').trim().toLowerCase();
+  const user = db.users.find(
+    (u) =>
+      (userId && u.id === userId) ||
+      (normalized && (u.username.toLowerCase() === normalized || u.email.toLowerCase() === normalized))
+  );
+
   if (!user) {
     return res.status(404).json({ error: 'Người dùng không tồn tại.' });
   }
-  if (user.passwordHash !== oldPassword) {
+
+  const isOldValid =
+    user.passwordHash === oldPassword ||
+    (user.username.toLowerCase() === 'luctt1' &&
+      (oldPassword === 'luctt1' || oldPassword === 'Luctt12026' || oldPassword === 'Luctt1'));
+
+  if (!isOldValid) {
     return res.status(400).json({ error: 'Mật khẩu hiện tại không đúng.' });
   }
 
@@ -326,9 +310,61 @@ app.post('/api/auth/change-password', (req: Request, res: Response) => {
   return res.json({ success: true, message: 'Đổi mật khẩu thành công.' });
 });
 
+// ======================== USER MANAGEMENT ROUTES ========================
+
+app.get('/api/users', (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  const safeUsers = db.users.map((u) => ({
+    id: u.id,
+    username: u.username,
+    name: u.name,
+    email: u.email,
+    role: u.role || 'Engineer',
+    unit: u.unit || 'Công ty Điện lực Chợ Lớn',
+    permissions: u.permissions || { canView: true, canEdit: true, canUpdate: true },
+  }));
+  return res.json({ users: safeUsers });
+});
+
+app.post('/api/users/update-permissions', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  const { users } = req.body;
+  if (!users || !Array.isArray(users)) {
+    return res.status(400).json({ error: 'Dữ liệu người dùng không hợp lệ.' });
+  }
+
+  for (const updatedUser of users) {
+    const existing = db.users.find(
+      (u) => u.id === updatedUser.id || u.username.toLowerCase() === updatedUser.username.toLowerCase()
+    );
+    if (existing) {
+      existing.role = updatedUser.role || existing.role;
+      existing.permissions = updatedUser.permissions || existing.permissions;
+    } else {
+      db.users.push(updatedUser);
+    }
+  }
+
+  saveDatabase(db);
+  broadcastToClients({ type: 'USERS_UPDATED', users: db.users });
+  return res.json({ success: true, message: 'Đã cập nhật phân quyền người dùng!' });
+});
+
+app.post('/api/users/delete', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  const { userId } = req.body;
+  if (!userId) {
+    return res.status(400).json({ error: 'Thiếu thông tin người dùng cần xóa.' });
+  }
+
+  db.users = db.users.filter((u) => u.id !== userId && u.username.toLowerCase() !== 'luctt1');
+  saveDatabase(db);
+  broadcastToClients({ type: 'USERS_UPDATED', users: db.users });
+  return res.json({ success: true, message: 'Đã xóa tài khoản cán bộ khỏi hệ thống!' });
+});
+
 // ======================== REALTIME SYNC ROUTES ========================
 
-// GET /api/sync/stream -> Server-Sent Events stream for instant push to Web & Smartphone
 app.get('/api/sync/stream', (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -340,100 +376,74 @@ app.get('/api/sync/stream', (req: Request, res: Response) => {
   const newClient: SSEClient = { id: clientId, res };
   sseClients.push(newClient);
 
-  // Send initial handshake with current state
   res.write(
     `data: ${JSON.stringify({
       type: 'INIT',
-      lastUpdated: db.lastUpdated,
-      assets: db.assets,
-      repairRecords: db.repairRecords,
-      planRecords: db.planRecords,
-      cycleRules: db.cycleRules,
-      systemLogs: db.systemLogs,
+      data: {
+        assets: db.assets,
+        repairRecords: db.repairRecords,
+        planRecords: db.planRecords,
+        cycleRules: db.cycleRules,
+        systemLogs: db.systemLogs,
+        users: db.users,
+      },
     })}\n\n`
   );
-  if (typeof (res as any).flush === 'function') {
-    (res as any).flush();
-  }
-
-  // Ping every 10 seconds to keep connection alive through cloud and cellular proxies
-  const keepAlive = setInterval(() => {
-    try {
-      res.write(': ping\n\n');
-      if (typeof (res as any).flush === 'function') {
-        (res as any).flush();
-      }
-    } catch (e) {
-      clearInterval(keepAlive);
-    }
-  }, 10000);
 
   req.on('close', () => {
-    clearInterval(keepAlive);
     sseClients = sseClients.filter((c) => c.id !== clientId);
   });
 });
 
-// GET /api/sync/pull -> Pull latest data
-app.get('/api/sync/pull', (req: Request, res: Response) => {
-  const since = Number(req.query.since) || 0;
+app.get('/api/sync/pull', (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
   return res.json({
-    lastUpdated: db.lastUpdated,
-    hasUpdates: db.lastUpdated > since,
     data: {
       assets: db.assets,
       repairRecords: db.repairRecords,
       planRecords: db.planRecords,
       cycleRules: db.cycleRules,
       systemLogs: db.systemLogs,
+      users: db.users,
+      lastUpdated: db.lastUpdated,
     },
   });
 });
 
-// POST /api/sync/push -> Client pushes changes to server, server broadcasts to all mobile & web clients
 app.post('/api/sync/push', (req: Request, res: Response) => {
-  const { assets, repairRecords, planRecords, cycleRules, systemLogs } = req.body;
+  res.setHeader('Content-Type', 'application/json');
+  const payload = req.body;
 
-  if (Array.isArray(assets)) db.assets = assets;
-  if (Array.isArray(repairRecords)) db.repairRecords = repairRecords;
-  if (Array.isArray(planRecords)) db.planRecords = planRecords;
-  if (Array.isArray(cycleRules)) db.cycleRules = cycleRules;
-  if (Array.isArray(systemLogs)) db.systemLogs = systemLogs;
+  if (payload.assets && Array.isArray(payload.assets)) db.assets = payload.assets;
+  if (payload.repairRecords && Array.isArray(payload.repairRecords)) db.repairRecords = payload.repairRecords;
+  if (payload.planRecords && Array.isArray(payload.planRecords)) db.planRecords = payload.planRecords;
+  if (payload.cycleRules && Array.isArray(payload.cycleRules)) db.cycleRules = payload.cycleRules;
+  if (payload.systemLogs && Array.isArray(payload.systemLogs)) db.systemLogs = payload.systemLogs;
+  if (payload.users && Array.isArray(payload.users)) db.users = payload.users;
 
-  db.lastUpdated = Date.now();
   saveDatabase(db);
+  broadcastToClients({ type: 'FULL_SYNC', data: payload });
 
-  // Broadcast to all connected web browsers & smartphones immediately
-  broadcastToClients({
-    type: 'UPDATE',
-    lastUpdated: db.lastUpdated,
-    assets: db.assets,
-    repairRecords: db.repairRecords,
-    planRecords: db.planRecords,
-    cycleRules: db.cycleRules,
-    systemLogs: db.systemLogs,
-  });
-
-  return res.json({ success: true, lastUpdated: db.lastUpdated });
+  return res.json({ success: true, timestamp: db.lastUpdated });
 });
 
-// Start dev or production server
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true, host: '0.0.0.0' },
+      server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
-    app.get('*', (_req: Request, res: Response) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+    app.use(express.static(path.join(process.cwd(), 'dist')));
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
     });
   }
 
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`[EVN Server] Listening on http://0.0.0.0:${port}`);
+  app.listen(PORT, () => {
+    console.log(`EVN Asset Handbook Server running at http://localhost:${PORT}`);
   });
 }
 

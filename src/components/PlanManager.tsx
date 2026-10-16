@@ -7,32 +7,56 @@ import {
   PlusCircle,
   Download,
   Search,
-  CheckCircle2,
   Trash2,
   Building2,
   Calendar,
-  Layers,
   ChevronDown,
   ChevronRight,
-  Sparkles,
+  Edit2,
+  X,
+  Eye,
+  FileCheck,
+  Pencil,
 } from 'lucide-react';
 
 export const PlanManager: React.FC = () => {
-  const { planRecords, assets, currentYear, setCurrentYear, addPlanRecord, deletePlanRecord } =
-    useApp();
+  const {
+    planRecords,
+    assets,
+    currentYear,
+    setCurrentYear,
+    addPlanRecord,
+    updatePlanRecord,
+    deletePlanRecord,
+    setSelectedAssetCode,
+  } = useApp();
 
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');
   const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>({});
 
-  // Form state
+  // Form state - Add modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [assetCodeInput, setAssetCodeInput] = useState('');
   const [projectNameInput, setProjectNameInput] = useState('');
   const [workContentInput, setWorkContentInput] = useState('');
   const [decisionNoInput, setDecisionNoInput] = useState('');
   const [estimatedCostInput, setEstimatedCostInput] = useState('');
+
+  // Form state - Edit Item modal
+  const [editingPlan, setEditingPlan] = useState<PlanRecord | null>(null);
+  const [editWorkContent, setEditWorkContent] = useState('');
+  const [editEstimatedCost, setEditEstimatedCost] = useState('');
+  const [editProjectName, setEditProjectName] = useState('');
+
+  // Form state - Edit Project Header modal (Tên công trình & Số QĐ)
+  const [editingProjectHeader, setEditingProjectHeader] = useState<{
+    oldName: string;
+    items: PlanRecord[];
+  } | null>(null);
+  const [headerNewName, setHeaderNewName] = useState('');
+  const [headerNewDecisionNo, setHeaderNewDecisionNo] = useState('');
 
   // Filter plans for selected year
   const yearPlans = planRecords.filter((p) => {
@@ -46,6 +70,7 @@ export const PlanManager: React.FC = () => {
         p.assetCode.toLowerCase().includes(q) ||
         p.projectName.toLowerCase().includes(q) ||
         (p.planCode && p.planCode.toLowerCase().includes(q)) ||
+        (p.decisionNo && p.decisionNo.toLowerCase().includes(q)) ||
         (asset && asset.assetName.toLowerCase().includes(q))
       );
     }
@@ -86,7 +111,7 @@ export const PlanManager: React.FC = () => {
     if (!assetCodeInput.trim() || !projectNameInput.trim()) return;
 
     addPlanRecord({
-      assetCode: assetCodeInput.trim(),
+      assetCode: assetCodeInput.trim().toUpperCase(),
       planYear: selectedYear,
       planCode: `KH-SCL-${selectedYear}-${Date.now().toString().slice(-4)}`,
       projectName: projectNameInput.trim(),
@@ -102,6 +127,56 @@ export const PlanManager: React.FC = () => {
     setShowAddModal(false);
     setAssetCodeInput('');
     setWorkContentInput('');
+    setDecisionNoInput('');
+    setEstimatedCostInput('');
+  };
+
+  const handleOpenEdit = (plan: PlanRecord) => {
+    setEditingPlan(plan);
+    setEditWorkContent(plan.workContent || '');
+    setEditEstimatedCost(plan.estimatedCost ? String(plan.estimatedCost) : '');
+    setEditProjectName(plan.projectName || '');
+  };
+
+  const handleEditPlanSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPlan) return;
+
+    updatePlanRecord(editingPlan.id, {
+      workContent: editWorkContent.trim(),
+      estimatedCost: editEstimatedCost ? Number(editEstimatedCost) : undefined,
+      projectName: editProjectName.trim() || editingPlan.projectName,
+    });
+
+    setEditingPlan(null);
+  };
+
+  // Open Edit Project Header
+  const handleOpenEditProjectHeader = (projName: string, items: PlanRecord[], e: React.MouseEvent) => {
+    e.stopPropagation();
+    const existingDecNo = items.find((i) => i.decisionNo)?.decisionNo || '';
+    setEditingProjectHeader({ oldName: projName, items });
+    setHeaderNewName(projName);
+    setHeaderNewDecisionNo(existingDecNo);
+  };
+
+  // Submit Project Header Rename & Decision No Update
+  const handleSaveProjectHeader = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProjectHeader || !headerNewName.trim()) return;
+
+    const { items } = editingProjectHeader;
+    const trimmedName = headerNewName.trim();
+    const trimmedDecNo = headerNewDecisionNo.trim();
+
+    items.forEach((item) => {
+      updatePlanRecord(item.id, {
+        projectName: trimmedName,
+        decisionNo: trimmedDecNo || undefined,
+      });
+    });
+
+    setEditingProjectHeader(null);
   };
 
   const handleExportPlansExcel = () => {
@@ -114,13 +189,12 @@ export const PlanManager: React.FC = () => {
         exportData.push({
           'Tên Công trình': projName,
           'Năm kế hoạch': p.planYear,
+          'Số quyết định': p.decisionNo || '',
           'Mã tài sản': p.assetCode,
           'Tên tài sản SCL': asset?.assetName || '',
           'Đơn vị quản lý': asset?.unit || '',
           'Nội dung công việc SCL': p.workContent || '',
-          'Dự toán (VNĐ)': p.estimatedCost || 0,
-          'Số quyết định': p.decisionNo || '',
-          'Trạng thái': p.status,
+          'Dự toán kinh phí (VNĐ)': p.estimatedCost || 0,
           'Mã KH': p.planCode || p.id,
         });
       });
@@ -139,21 +213,21 @@ export const PlanManager: React.FC = () => {
             Quản lý Kế hoạch Sửa chữa lớn (SCL) Phân loại theo Công trình
           </h2>
           <p className="text-xs text-slate-500">
-            Hiển thị đầu mục theo Tên Công trình, liệt kê các mã tài sản cần SCL tương ứng theo từng công trình.
+            Hiển thị Tên Công trình, Số Quyết định & Tổng dự toán ở Đầu mục. Cho phép sửa tên Công trình trực tiếp tại Đầu mục.
           </p>
         </div>
 
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow transition-all"
+            className="flex items-center space-x-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow transition-all cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Thêm Tài sản vào Công trình</span>
           </button>
           <button
             onClick={handleExportPlansExcel}
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow transition-all"
+            className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow transition-all cursor-pointer"
           >
             <Download className="w-4 h-4" />
             <span>Xuất Excel Theo Công trình</span>
@@ -174,7 +248,7 @@ export const PlanManager: React.FC = () => {
                   setSelectedYear(yr);
                   setCurrentYear(yr);
                 }}
-                className={`px-3 py-1 rounded-md font-bold transition-all ${
+                className={`px-3 py-1 rounded-md font-bold transition-all cursor-pointer ${
                   selectedYear === yr ? 'bg-amber-400 text-slate-950' : 'text-slate-300 hover:text-white'
                 }`}
               >
@@ -189,7 +263,7 @@ export const PlanManager: React.FC = () => {
           <div className="relative flex-1">
             <input
               type="text"
-              placeholder="Tìm tên Công trình, mã tài sản..."
+              placeholder="Tìm tên Công trình, số QĐ, mã tài sản..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-bold placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400"
@@ -200,7 +274,7 @@ export const PlanManager: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="Approved">Đã phê duyệt</option>
@@ -221,14 +295,14 @@ export const PlanManager: React.FC = () => {
           <div className="flex items-center space-x-2">
             <button
               onClick={handleExpandAll}
-              className="flex items-center space-x-1 px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-700 font-bold border border-blue-200 rounded-lg shadow-sm transition-all"
+              className="flex items-center space-x-1 px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-700 font-bold border border-blue-200 rounded-lg shadow-sm transition-all cursor-pointer"
             >
               <ChevronDown className="w-3.5 h-3.5" />
               <span>Mở rộng tất cả</span>
             </button>
             <button
               onClick={handleCollapseAll}
-              className="flex items-center space-x-1 px-3 py-1.5 bg-white hover:bg-slate-200 text-slate-700 font-bold border border-slate-300 rounded-lg shadow-sm transition-all"
+              className="flex items-center space-x-1 px-3 py-1.5 bg-white hover:bg-slate-200 text-slate-700 font-bold border border-slate-300 rounded-lg shadow-sm transition-all cursor-pointer"
             >
               <ChevronRight className="w-3.5 h-3.5" />
               <span>Thu gọn tất cả</span>
@@ -253,125 +327,300 @@ export const PlanManager: React.FC = () => {
             const totalProjectCost = projectItems.reduce((sum, item) => sum + (item.estimatedCost || 0), 0);
             const isCollapsed = !!collapsedProjects[projName];
 
+            // Extract unique Decision Numbers for this project header
+            const decisionNumbers = Array.from(
+              new Set(projectItems.map((i) => i.decisionNo).filter(Boolean))
+            );
+
             return (
               <div
                 key={projName}
                 className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
               >
-                {/* Công trình Block Header */}
+                {/* Công trình Block Header with Decision No & Rename Action */}
                 <div
                   onClick={() => toggleProject(projName)}
-                  className="bg-gradient-to-r from-slate-900 to-blue-950 hover:from-slate-850 hover:to-blue-900 text-white p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700 cursor-pointer select-none transition-colors"
+                  className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 hover:brightness-110 text-white p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700 cursor-pointer select-none transition-colors"
                 >
                   <div className="flex items-start space-x-3">
                     <div className="w-8 h-8 rounded-lg bg-blue-600/80 flex items-center justify-center font-bold text-amber-300 text-sm border border-blue-400 shrink-0 mt-0.5">
                       {index + 1}
                     </div>
                     <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-blue-300">
+                      <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                        <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-blue-300 bg-blue-900/60 px-2 py-0.5 rounded border border-blue-700">
                           CÔNG TRÌNH SCL NĂM {selectedYear}
                         </span>
-                        {isCollapsed ? (
-                          <span className="px-2 py-0.5 bg-slate-800 text-amber-300 text-[10px] rounded font-bold">
-                            Đang thu gọn
+
+                        {/* SỐ QUYẾT ĐỊNH HIỂN THỊ NỔI BẬT TẠI ĐẦU MỤC CÔNG TRÌNH */}
+                        <span className="text-[11px] font-mono font-extrabold text-amber-300 bg-amber-950/80 border border-amber-600 px-2.5 py-0.5 rounded flex items-center gap-1 shadow-sm">
+                          <FileCheck className="w-3.5 h-3.5 text-amber-400" />
+                          <span>
+                            {decisionNumbers.length > 0
+                              ? `Số QĐ: ${decisionNumbers.join(', ')}`
+                              : 'Chưa có số QĐ'}
                           </span>
-                        ) : (
-                          <span className="px-2 py-0.5 bg-blue-900 text-blue-200 text-[10px] rounded font-bold">
-                            Đang mở rộng
-                          </span>
-                        )}
+                        </span>
                       </div>
-                      <h3 className="text-base font-extrabold text-white leading-snug flex items-center gap-2">
-                        <span>{projName}</span>
-                        {isCollapsed ? (
-                          <ChevronRight className="w-4 h-4 text-amber-400" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-amber-400" />
-                        )}
-                      </h3>
-                      <p className="text-xs text-slate-300 mt-0.5">
+
+                      <div className="flex items-center space-x-2 mt-1.5 flex-wrap">
+                        <h3 className="text-base font-extrabold text-white leading-snug flex items-center gap-2">
+                          <span>{projName}</span>
+                          {isCollapsed ? (
+                            <ChevronRight className="w-4 h-4 text-amber-400" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-amber-400" />
+                          )}
+                        </h3>
+
+                        {/* Button Edit Project Name & Decision Number at Header */}
+                        <button
+                          onClick={(e) => handleOpenEditProjectHeader(projName, projectItems, e)}
+                          className="px-2 py-1 bg-amber-500/90 hover:bg-amber-400 text-slate-950 text-[11px] font-black rounded-lg shadow flex items-center space-x-1 cursor-pointer transition-all"
+                          title="Sửa Tên Công trình & Số Quyết định cho toàn bộ Công trình này"
+                        >
+                          <Pencil className="w-3 h-3 text-slate-950" />
+                          <span>Sửa Tên & Số QĐ</span>
+                        </button>
+                      </div>
+
+                      <p className="text-xs text-slate-300 mt-1">
                         Bao gồm <span className="font-bold text-amber-300">{projectItems.length}</span> tài sản/thiết bị thực hiện SCL
                       </p>
                     </div>
                   </div>
 
-                  {totalProjectCost > 0 && (
-                    <div className="text-right bg-blue-900/60 px-3 py-1.5 rounded-xl border border-blue-700/60 shrink-0">
-                      <span className="text-[10px] text-blue-200 block">Tổng dự toán Công trình:</span>
-                      <span className="font-extrabold text-amber-300 text-sm">
-                        {totalProjectCost.toLocaleString('vi-VN')} đ
-                      </span>
-                    </div>
-                  )}
+                  {/* Single Total Cost Column for the whole Construction Project */}
+                  <div className="text-right bg-blue-900/80 px-4 py-2 rounded-xl border border-blue-600/80 shrink-0 shadow-inner">
+                    <span className="text-[10px] text-blue-200 font-bold block uppercase tracking-wide">
+                      TỔNG CHI PHÍ DỰ TOÁN CÔNG TRÌNH:
+                    </span>
+                    <span className="font-extrabold text-amber-300 text-base sm:text-lg">
+                      {totalProjectCost > 0 ? `${totalProjectCost.toLocaleString('vi-VN')} đ` : 'Chưa cập nhật kinh phí'}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Sub-table listing Assets under this Công trình (Hidden if collapsed) */}
+                {/* Sub-table listing Assets under this Công trình (Decision No and Status columns removed as requested) */}
                 {!isCollapsed && (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[11px]">
-                      <tr>
-                        <th className="p-3">Mã TS</th>
-                        <th className="p-3">Tên tài sản</th>
-                        <th className="p-3">Nội dung công việc SCL</th>
-                        <th className="p-3">Dự toán (VNĐ)</th>
-                        <th className="p-3">Số quyết định</th>
-                        <th className="p-3">Trạng thái</th>
-                        <th className="p-3 text-right">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {projectItems.map((item) => {
-                        const asset = assets.find((a) => a.assetCode === item.assetCode);
-                        return (
-                          <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                            <td className="p-3 font-mono font-bold text-blue-900 whitespace-nowrap">
-                              {item.assetCode}
-                            </td>
-                            <td className="p-3 font-bold text-slate-800 max-w-xs">
-                              <div>{asset?.assetName || 'Tài sản'}</div>
-                              <span className="text-[10px] text-slate-500 font-normal">
-                                {asset?.unit} • {asset?.location}
-                              </span>
-                            </td>
-                            <td className="p-3 font-medium text-slate-800">
-                              {item.workContent || 'Sửa chữa lớn theo chu kỳ'}
-                            </td>
-                            <td className="p-3 font-bold text-emerald-700 whitespace-nowrap">
-                              {item.estimatedCost ? `${item.estimatedCost.toLocaleString('vi-VN')} đ` : '-'}
-                            </td>
-                            <td className="p-3 font-mono text-slate-600 whitespace-nowrap">
-                              {item.decisionNo || '-'}
-                            </td>
-                            <td className="p-3 whitespace-nowrap">
-                              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px]">
-                                {item.status}
-                              </span>
-                            </td>
-                            <td className="p-3 text-right whitespace-nowrap">
-                              <button
-                                onClick={() => {
-                                  if (confirm(`Xóa tài sản ${item.assetCode} khỏi công trình "${projName}"?`)) {
-                                    deletePlanRecord(item.id);
-                                  }
-                                }}
-                                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded"
-                                title="Xóa khỏi công trình"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[11px] border-b border-slate-200">
+                        <tr>
+                          <th className="p-3 w-40">Mã tài sản</th>
+                          <th className="p-3">Tên tài sản</th>
+                          <th className="p-3">Nội dung công việc SCL</th>
+                          <th className="p-3 w-28 text-right">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {projectItems.map((item) => {
+                          const asset = assets.find((a) => a.assetCode === item.assetCode);
+                          return (
+                            <tr key={item.id} className="hover:bg-blue-50/50 transition-colors">
+                              <td className="p-3 whitespace-nowrap">
+                                <button
+                                  onClick={() => setSelectedAssetCode(item.assetCode)}
+                                  className="font-mono font-bold text-blue-700 hover:text-blue-900 hover:underline flex items-center space-x-1 cursor-pointer"
+                                  title="Xem chi tiết tài sản"
+                                >
+                                  <span>{item.assetCode}</span>
+                                  <Eye className="w-3.5 h-3.5 text-blue-400" />
+                                </button>
+                              </td>
+                              <td className="p-3 font-bold text-slate-800 max-w-xs">
+                                <div>{asset?.assetName || 'Tài sản EVN'}</div>
+                                <span className="text-[10px] text-slate-500 font-normal">
+                                  {asset?.unit} • {asset?.location}
+                                </span>
+                              </td>
+                              <td className="p-3 font-medium text-slate-800">
+                                {item.workContent || 'Sửa chữa lớn theo chu kỳ'}
+                              </td>
+                              <td className="p-3 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end space-x-1">
+                                  {/* Edit Item Button */}
+                                  <button
+                                    onClick={() => handleOpenEdit(item)}
+                                    className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
+                                    title="Chỉnh sửa nội dung công việc SCL"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  {/* Delete Item Button */}
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`Xóa tài sản ${item.assetCode} khỏi công trình "${projName}"?`)) {
+                                        deletePlanRecord(item.id);
+                                      }
+                                    }}
+                                    className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                    title="Xóa khỏi công trình"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Modal Edit Project Header (Tên công trình & Số QĐ) */}
+      {editingProjectHeader && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-200">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-amber-600" />
+                <span>Sửa Tên Công Trình & Số Quyết Định</span>
+              </h3>
+              <button
+                onClick={() => setEditingProjectHeader(null)}
+                className="text-slate-400 hover:text-slate-700 font-bold cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProjectHeader} className="space-y-4 text-xs">
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">
+                  Tên Công trình SCL mới *:
+                </label>
+                <input
+                  type="text"
+                  value={headerNewName}
+                  onChange={(e) => setHeaderNewName(e.target.value)}
+                  required
+                  placeholder="Nhập lại tên công trình chuẩn xác..."
+                  className="w-full p-3 bg-white border border-slate-300 rounded-xl font-extrabold text-slate-900 text-xs focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  Cập nhật tên mới sẽ tự động áp dụng cho tất cả {editingProjectHeader.items.length} mã tài sản trong công trình này.
+                </span>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">
+                  Số quyết định phê duyệt (Đầu mục):
+                </label>
+                <input
+                  type="text"
+                  value={headerNewDecisionNo}
+                  onChange={(e) => setHeaderNewDecisionNo(e.target.value)}
+                  placeholder="VD: QĐ-8899/QĐ-EVNHCMC"
+                  className="w-full p-3 bg-white border border-slate-300 rounded-xl font-mono font-bold text-slate-900 text-xs focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setEditingProjectHeader(null)}
+                  className="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow cursor-pointer"
+                >
+                  Lưu Tên mới & Số QĐ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Plan Item Modal */}
+      {editingPlan && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-200">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Edit2 className="w-4 h-4 text-blue-600" />
+                Chỉnh sửa Nội dung Tài sản KH SCL
+              </h3>
+              <button
+                onClick={() => setEditingPlan(null)}
+                className="text-slate-400 hover:text-slate-700 font-bold cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditPlanSubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">Mã tài sản:</label>
+                <input
+                  type="text"
+                  value={editingPlan.assetCode}
+                  disabled
+                  className="w-full p-2.5 bg-slate-100 border border-slate-300 rounded-xl font-mono font-bold text-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">Tên Công trình SCL:</label>
+                <input
+                  type="text"
+                  value={editProjectName}
+                  onChange={(e) => setEditProjectName(e.target.value)}
+                  required
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">Nội dung công việc SCL *:</label>
+                <textarea
+                  value={editWorkContent}
+                  onChange={(e) => setEditWorkContent(e.target.value)}
+                  required
+                  rows={3}
+                  placeholder="Nhập nội dung công việc sửa chữa lớn..."
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">Dự toán kinh phí (VNĐ):</label>
+                <input
+                  type="number"
+                  placeholder="Tính tổng vào Kinh phí Công trình"
+                  value={editEstimatedCost}
+                  onChange={(e) => setEditEstimatedCost(e.target.value)}
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-emerald-700"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setEditingPlan(null)}
+                  className="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow cursor-pointer"
+                >
+                  Cập nhật Thay đổi
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -452,13 +701,13 @@ export const PlanManager: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-lg"
+                  className="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg cursor-pointer"
                 >
                   Lưu vào Công trình
                 </button>

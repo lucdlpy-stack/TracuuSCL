@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { removeAccents, matchVietnamese } from '../utils/vietnamese';
 import {
   Search,
   CheckCircle2,
@@ -8,10 +9,10 @@ import {
   Building2,
   MapPin,
   Calendar,
-  Layers,
   ChevronRight,
-  Sparkles,
+  Filter,
   Info,
+  RotateCcw,
 } from 'lucide-react';
 
 interface QuickSearchProps {
@@ -32,38 +33,44 @@ export const QuickSearch: React.FC<QuickSearchProps> = ({ onSelectAsset }) => {
 
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [unitFilter, setUnitFilter] = useState<string>('ALL');
+  const [cycleFilter, setCycleFilter] = useState<string>('ALL');
 
-  // Multi-field search algorithm
+  // Accent-insensitive multi-field search algorithm
   const filteredAssets = assets.filter((asset) => {
     // Category filter
     if (categoryFilter !== 'ALL' && asset.category !== categoryFilter) return false;
     // Unit filter
     if (unitFilter !== 'ALL' && asset.unit !== unitFilter) return false;
 
+    // Cycle filter
+    const cycleStatus = getAssetCycleStatus(asset);
+    if (cycleFilter === 'GREEN' && cycleStatus.statusColor !== 'GREEN') return false;
+    if (cycleFilter === 'YELLOW' && cycleStatus.statusColor !== 'YELLOW') return false;
+    if (cycleFilter === 'RED' && cycleStatus.statusColor !== 'RED') return false;
+    if (cycleFilter === 'OVERDUE' && !cycleStatus.isOverdue) return false;
+
     if (!searchQuery.trim()) return true;
 
-    const q = searchQuery.toLowerCase().trim();
-
-    // Check code, name, category, location, unit
+    // Accent-insensitive search match
     if (
-      asset.assetCode.toLowerCase().includes(q) ||
-      asset.assetName.toLowerCase().includes(q) ||
-      asset.category.toLowerCase().includes(q) ||
-      asset.location.toLowerCase().includes(q) ||
-      asset.unit.toLowerCase().includes(q) ||
-      (asset.notes && asset.notes.toLowerCase().includes(q))
+      matchVietnamese(asset.assetCode, searchQuery) ||
+      matchVietnamese(asset.assetName, searchQuery) ||
+      matchVietnamese(asset.category, searchQuery) ||
+      matchVietnamese(asset.location, searchQuery) ||
+      matchVietnamese(asset.unit, searchQuery) ||
+      matchVietnamese(asset.notes, searchQuery)
     ) {
       return true;
     }
 
-    // Check repair contents
+    // Check repair contents with accent-insensitive search
     const repairs = repairRecords.filter((r) => r.assetCode === asset.assetCode);
     if (
       repairs.some(
         (r) =>
-          r.workContent.toLowerCase().includes(q) ||
-          (r.cause && r.cause.toLowerCase().includes(q)) ||
-          (r.decisionNo && r.decisionNo.toLowerCase().includes(q))
+          matchVietnamese(r.workContent, searchQuery) ||
+          matchVietnamese(r.cause, searchQuery) ||
+          matchVietnamese(r.decisionNo, searchQuery)
       )
     ) {
       return true;
@@ -74,9 +81,9 @@ export const QuickSearch: React.FC<QuickSearchProps> = ({ onSelectAsset }) => {
     if (
       plans.some(
         (p) =>
-          p.projectName.toLowerCase().includes(q) ||
-          (p.planCode && p.planCode.toLowerCase().includes(q)) ||
-          (p.workContent && p.workContent.toLowerCase().includes(q))
+          matchVietnamese(p.projectName, searchQuery) ||
+          matchVietnamese(p.planCode, searchQuery) ||
+          matchVietnamese(p.workContent, searchQuery)
       )
     ) {
       return true;
@@ -85,120 +92,166 @@ export const QuickSearch: React.FC<QuickSearchProps> = ({ onSelectAsset }) => {
     return false;
   });
 
-  // Extract unique categories and units for quick chips
+  // Extract unique categories and units for filter selectors
   const categories = Array.from(new Set(assets.map((a) => a.category)));
   const units = Array.from(new Set(assets.map((a) => a.unit)));
 
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setCategoryFilter('ALL');
+    setUnitFilter('ALL');
+    setCycleFilter('ALL');
+  };
+
   return (
     <div className="space-y-6">
-      {/* Search Header Banner */}
-      <div className="bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-xl border border-blue-800 relative overflow-hidden">
-        <div className="absolute right-0 top-0 opacity-10 pointer-events-none transform translate-x-10 -translate-y-10">
-          <Sparkles className="w-96 h-96 text-blue-300" />
+      {/* Search Header Container */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div>
+            <h2 className="text-lg font-black text-white flex items-center gap-2">
+              <Search className="w-5 h-5 text-amber-400" />
+              Tra Cứu Nhanh Hồ Sơ & Chu Kỳ Bảo Trì SCL
+            </h2>
+            <p className="text-xs text-slate-400">
+              Hỗ trợ tìm kiếm thông minh <span className="text-amber-300 font-semibold">không dấu</span> theo Mã tài sản, Tên thiết bị, Đơn vị, hoặc Công trình
+            </p>
+          </div>
+
+          <div className="text-xs text-slate-400 font-semibold bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 shrink-0">
+            Kết quả: <span className="text-amber-400 font-extrabold">{filteredAssets.length}</span> / {assets.length} tài sản
+          </div>
         </div>
 
-        <div className="relative z-10 max-w-3xl mx-auto text-center space-y-4">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-800/80 border border-blue-600 text-xs font-semibold text-blue-200">
-            <Search className="w-3.5 h-3.5 text-amber-400" />
-            <span>Tra cứu Thông tin & Chu kỳ Bảo trì Tài sản EVN</span>
-          </div>
-
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-            Nhập Mã tài sản hoặc Tên thiết bị
-          </h2>
-
-          {/* Big Search Bar Input */}
-          <div className="relative mt-4">
-            <input
-              type="text"
-              placeholder="VD: EVN-CL-MC22-01, Recloser, Trạm 110kV Chợ Lớn, T2 63MVA, KH-SCL-2026..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-28 py-4 bg-white text-slate-900 placeholder-slate-400 rounded-xl text-base sm:text-lg font-medium shadow-2xl focus:outline-none focus:ring-4 focus:ring-amber-400 focus:border-amber-400 transition-all"
-              autoFocus
-            />
-            <Search className="w-6 h-6 text-slate-400 absolute left-4 top-4" />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-3 text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg font-bold"
-              >
-                Xóa tìm kiếm
-              </button>
-            )}
-          </div>
-
-          {/* Quick Filter Chips */}
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-xs">
-            <span className="text-blue-300 font-medium">Lọc nhanh theo loại:</span>
+        {/* Big Compact Search Input */}
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Gõ từ khóa không dấu hoặc có dấu (VD: 'may bien ap', 'recloser', 'EVN-CL-MC22', '110kv')..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-11 pr-28 py-3.5 bg-slate-950 text-white placeholder-slate-500 rounded-xl text-sm sm:text-base font-medium border border-slate-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all"
+            autoFocus
+          />
+          <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-4" />
+          {searchQuery && (
             <button
-              onClick={() => setCategoryFilter('ALL')}
-              className={`px-2.5 py-1 rounded-full font-medium transition-colors ${
-                categoryFilter === 'ALL'
-                  ? 'bg-amber-400 text-slate-950 font-bold'
-                  : 'bg-blue-950/80 text-blue-200 border border-blue-700 hover:bg-blue-800'
-              }`}
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg font-bold"
             >
-              Tất cả ({assets.length})
+              Xóa
             </button>
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat)}
-                className={`px-2.5 py-1 rounded-full font-medium transition-colors ${
-                  categoryFilter === cat
-                    ? 'bg-amber-400 text-slate-950 font-bold'
-                    : 'bg-blue-950/80 text-blue-200 border border-blue-700 hover:bg-blue-800'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+          )}
+        </div>
+
+        {/* Advanced Filters Toolbar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          {/* Unit Filter */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+              <Building2 className="w-3.5 h-3.5 text-blue-400" />
+              <span>Đơn vị quản lý:</span>
+            </label>
+            <select
+              value={unitFilter}
+              onChange={(e) => setUnitFilter(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              <option value="ALL">-- Tất cả Đơn vị ({units.length}) --</option>
+              {units.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Maintenance Cycle Filter */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Trạng thái Chu kỳ SCL:</span>
+            </label>
+            <select
+              value={cycleFilter}
+              onChange={(e) => setCycleFilter(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              <option value="ALL">-- Tất cả trạng thái chu kỳ --</option>
+              <option value="GREEN">🟢 Xanh: Đủ điều kiện SCL (&gt; 5 năm)</option>
+              <option value="YELLOW">🟡 Vàng: Đúng mốc / Thiếu dữ liệu SCL</option>
+              <option value="RED">🔴 Đỏ: Chưa đủ chu kỳ (Mới SCL gần đây)</option>
+              <option value="OVERDUE">⚡ Quá mốc chu kỳ bảo trì</option>
+            </select>
+          </div>
+
+          {/* Category Filter */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+              <Filter className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Loại danh mục thiết bị:</span>
+            </label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              <option value="ALL">-- Tất cả Loại thiết bị ({categories.length}) --</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
-      </div>
 
-      {/* Unit Selector Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-        <div className="flex items-center space-x-2 text-slate-700 text-sm font-semibold">
-          <Building2 className="w-4 h-4 text-blue-600" />
-          <span>Đơn vị quản lý:</span>
-          <select
-            value={unitFilter}
-            onChange={(e) => setUnitFilter(e.target.value)}
-            className="bg-slate-100 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="ALL">-- Tất cả đơn vị EVN ({units.length}) --</option>
-            {units.map((u) => (
-              <option key={u} value={u}>
-                {u}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Quick Active Filter Badges & Reset Button */}
+        {(categoryFilter !== 'ALL' || unitFilter !== 'ALL' || cycleFilter !== 'ALL' || searchQuery) && (
+          <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-slate-400 font-bold text-[11px]">Đang lọc:</span>
+              {unitFilter !== 'ALL' && (
+                <span className="bg-blue-900/80 text-blue-200 border border-blue-700 px-2 py-0.5 rounded-md font-semibold text-[11px]">
+                  {unitFilter}
+                </span>
+              )}
+              {cycleFilter !== 'ALL' && (
+                <span className="bg-amber-900/80 text-amber-200 border border-amber-700 px-2 py-0.5 rounded-md font-semibold text-[11px]">
+                  Chu kỳ: {cycleFilter}
+                </span>
+              )}
+              {categoryFilter !== 'ALL' && (
+                <span className="bg-emerald-900/80 text-emerald-200 border border-emerald-700 px-2 py-0.5 rounded-md font-semibold text-[11px]">
+                  {categoryFilter}
+                </span>
+              )}
+            </div>
 
-        <div className="text-xs text-slate-500 font-medium">
-          Tìm thấy <span className="font-bold text-blue-600">{filteredAssets.length}</span> tài sản phù hợp
-        </div>
+            <button
+              onClick={handleResetFilters}
+              className="flex items-center space-x-1 text-slate-400 hover:text-amber-400 font-bold text-xs"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Đặt lại bộ lọc</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Search Results Grid */}
       {filteredAssets.length === 0 ? (
-        <div className="bg-white rounded-xl p-12 text-center border border-slate-200 space-y-3">
-          <Info className="w-12 h-12 text-slate-400 mx-auto" />
-          <h3 className="text-lg font-bold text-slate-700">Không tìm thấy tài sản nào phù hợp</h3>
-          <p className="text-sm text-slate-500 max-w-md mx-auto">
-            Vui lòng kiểm tra lại mã tài sản, tên thiết bị hoặc thử từ khóa tìm kiếm khác.
+        <div className="bg-slate-900 rounded-2xl p-12 text-center border border-slate-800 space-y-3">
+          <Info className="w-12 h-12 text-slate-500 mx-auto" />
+          <h3 className="text-lg font-bold text-slate-200">Không tìm thấy tài sản nào phù hợp</h3>
+          <p className="text-xs text-slate-400 max-w-md mx-auto">
+            Thử nhập từ khóa khác hoặc bỏ các bộ lọc Đơn vị / Chu kỳ để xem toàn bộ danh sách.
           </p>
           <button
-            onClick={() => {
-              setSearchQuery('');
-              setCategoryFilter('ALL');
-              setUnitFilter('ALL');
-            }}
-            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700"
+            onClick={handleResetFilters}
+            className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-colors"
           >
-            Đặt lại bộ lọc
+            Xóa bộ lọc & Hiển thị lại tất cả
           </button>
         </div>
       ) : (
@@ -211,7 +264,7 @@ export const QuickSearch: React.FC<QuickSearchProps> = ({ onSelectAsset }) => {
               <div
                 key={asset.assetCode}
                 onClick={() => onSelectAsset(asset.assetCode)}
-                className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 hover:shadow-md hover:border-blue-400 transition-all cursor-pointer flex flex-col justify-between group relative overflow-hidden"
+                className="bg-slate-900 rounded-2xl p-5 shadow-lg border border-slate-800 hover:border-blue-500 transition-all cursor-pointer flex flex-col justify-between group relative overflow-hidden"
               >
                 {/* Top accent bar matching cycle warning */}
                 <div
@@ -227,60 +280,60 @@ export const QuickSearch: React.FC<QuickSearchProps> = ({ onSelectAsset }) => {
                 <div className="space-y-3 pt-1">
                   {/* Header Code & Category */}
                   <div className="flex items-start justify-between gap-2">
-                    <span className="font-mono text-xs font-extrabold text-blue-900 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <span className="font-mono text-xs font-extrabold text-blue-300 bg-blue-950 border border-blue-800 px-2.5 py-1 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
                       {asset.assetCode}
                     </span>
-                    <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    <span className="text-[11px] font-semibold text-slate-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
                       {asset.category}
                     </span>
                   </div>
 
                   {/* Asset Name */}
-                  <h3 className="font-bold text-sm text-slate-900 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
+                  <h3 className="font-bold text-sm text-white line-clamp-2 leading-snug group-hover:text-amber-300 transition-colors">
                     {asset.assetName}
                   </h3>
 
                   {/* Unit & Location */}
-                  <div className="text-xs text-slate-600 space-y-1">
+                  <div className="text-xs text-slate-400 space-y-1">
                     <div className="flex items-center space-x-1.5">
-                      <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                       <span className="truncate">{asset.unit}</span>
                     </div>
                     <div className="flex items-center space-x-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                       <span className="truncate">{asset.location}</span>
                     </div>
                   </div>
 
                   {/* Badges Matrix */}
-                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
+                  <div className="pt-2 border-t border-slate-800 flex flex-col gap-2">
                     {/* Cycle Warning Status Badge */}
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 text-[11px]">Chu kỳ SCL (5y):</span>
+                      <span className="text-slate-400 text-[11px]">Chu kỳ SCL:</span>
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
                           cycleStatus.statusColor === 'RED'
-                            ? 'bg-rose-50 text-rose-700 border-rose-300'
+                            ? 'bg-rose-950/80 text-rose-300 border-rose-800'
                             : cycleStatus.statusColor === 'YELLOW'
-                            ? 'bg-amber-50 text-amber-800 border-amber-300'
-                            : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                            ? 'bg-amber-950/80 text-amber-300 border-amber-800'
+                            : 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
                         }`}
                       >
-                        {cycleStatus.statusColor === 'RED' && <AlertTriangle className="w-3 h-3 text-rose-600" />}
-                        {cycleStatus.statusColor === 'YELLOW' && <Clock className="w-3 h-3 text-amber-600" />}
-                        {cycleStatus.statusColor === 'GREEN' && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
+                        {cycleStatus.statusColor === 'RED' && <AlertTriangle className="w-3 h-3 text-rose-400" />}
+                        {cycleStatus.statusColor === 'YELLOW' && <Clock className="w-3 h-3 text-amber-400" />}
+                        {cycleStatus.statusColor === 'GREEN' && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
                         {cycleStatus.statusLabel}
                       </span>
                     </div>
 
                     {/* Plan Status Badge */}
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 text-[11px]">KH năm {currentYear}:</span>
+                      <span className="text-slate-400 text-[11px]">KH năm {currentYear}:</span>
                       <span
                         className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${
                           planStatus.planColor === 'BLUE'
                             ? 'bg-blue-900/60 text-blue-200 border-blue-600'
-                            : 'bg-slate-800 text-slate-300 border-slate-700'
+                            : 'bg-slate-800 text-slate-400 border-slate-700'
                         }`}
                       >
                         {planStatus.statusLabel}
@@ -290,8 +343,8 @@ export const QuickSearch: React.FC<QuickSearchProps> = ({ onSelectAsset }) => {
                 </div>
 
                 {/* Footer Link */}
-                <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-blue-600 font-bold group-hover:translate-x-1 transition-transform">
-                  <span>Xem chi tiết hồ sơ & lịch sử</span>
+                <div className="mt-4 pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-blue-400 font-bold group-hover:translate-x-1 transition-transform">
+                  <span>Xem hồ sơ & lịch sử sửa chữa</span>
                   <ChevronRight className="w-4 h-4" />
                 </div>
               </div>

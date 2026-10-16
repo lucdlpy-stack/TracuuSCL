@@ -6,16 +6,16 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Zap,
   TrendingUp,
   Upload,
-  BarChart3,
   Sparkles,
   ArrowRight,
   ShieldAlert,
   FolderGit2,
-  Smartphone,
   RefreshCw,
+  Search,
+  Building2,
+  Filter,
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -32,7 +32,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectAsset }) => {
     setActiveTab,
     loadTestScenarios,
     forceSyncAll,
-    isOnline,
   } = useApp();
 
   // Metrics computation
@@ -76,51 +75,91 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectAsset }) => {
     new Set(planRecords.filter((p) => p.planYear === currentYear).map((p) => p.projectName))
   );
 
+  const units = Array.from(new Set(assets.map((a) => a.unit)));
+
+  // Redirect to QuickSearch tab when user interacts with search box
+  const handleGoToSearch = () => {
+    setActiveTab('search');
+  };
+
   return (
     <div className="space-y-6">
-      {/* Welcome Hero Banner with Electric Glowing Theme */}
-      <div className="relative bg-gradient-to-r from-blue-950 via-indigo-950 to-slate-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-blue-700/60 overflow-hidden backdrop-blur-xl">
-        <div className="absolute -right-10 -bottom-10 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute right-20 top-0 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-3 max-w-2xl">
-            <div className="inline-flex items-center space-x-2 bg-blue-900/80 px-3.5 py-1 rounded-full text-xs font-extrabold text-blue-200 border border-blue-500/60 shadow-inner">
-              <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              <span>Sổ tay Quản lý & Tra cứu SCL Điện lực EVN</span>
+      {/* Sleek Compact Search Bar on Home Page (Navigates directly to 'search' tab upon click/focus) */}
+      <div
+        onClick={handleGoToSearch}
+        className="bg-slate-900 border border-slate-800 hover:border-amber-400 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4 relative overflow-hidden cursor-pointer group transition-all"
+      >
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-3">
+          <div className="space-y-1">
+            <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-blue-950 text-blue-300 text-[11px] font-bold border border-blue-800">
+              <Search className="w-3.5 h-3.5 text-amber-400" />
+              <span>Tra Cứu Nhanh Trang Chủ • Bấm để mở danh mục Tra cứu</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white leading-tight">
-              Tổng quan Vận hành & Cảnh báo SCL Realtime
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight group-hover:text-amber-300 transition-colors flex items-center gap-2">
+              Sổ tay Tra cứu SCL Thiết bị EVN
+              <ArrowRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
             </h1>
-            <p className="text-xs sm:text-sm text-blue-200/90 leading-relaxed">
-              Ứng dụng PWA hỗ trợ đồng bộ mượt mà giữa Web và Smartphone. Đối soát kế hoạch SCL năm{' '}
-              <span className="font-extrabold text-amber-300">{currentYear}</span> tự động theo Công trình.
-            </p>
           </div>
 
-          {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+          {/* Compact Quick Action Bar */}
+          <div className="flex items-center space-x-2 shrink-0" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={forceSyncAll}
-              className="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all border border-emerald-400"
+              className="flex items-center space-x-1 px-3 py-1.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/80 rounded-xl text-xs font-bold transition-all"
+              title="Đồng bộ dữ liệu đa thiết bị Realtime"
             >
-              <RefreshCw className="w-4 h-4 text-emerald-100" />
-              <span>Đồng bộ Ngay</span>
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Đồng bộ</span>
             </button>
             <button
               onClick={() => setActiveTab('excel-import')}
-              className="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all border border-blue-400"
+              className="flex items-center space-x-1 px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-blue-200 border border-blue-700 rounded-xl text-xs font-bold transition-all"
             >
-              <Upload className="w-4 h-4" />
-              <span>Nhập Excel</span>
+              <Upload className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Excel</span>
             </button>
             <button
               onClick={loadTestScenarios}
-              className="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3.5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold rounded-xl shadow-lg transition-all"
+              className="flex items-center space-x-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black transition-all"
             >
-              <Sparkles className="w-4 h-4 text-slate-950" />
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Kịch bản Test</span>
             </button>
+          </div>
+        </div>
+
+        {/* Compact Search Trigger Input Box */}
+        <div className="space-y-3">
+          <div className="relative">
+            <input
+              type="text"
+              readOnly
+              onClick={handleGoToSearch}
+              onFocus={handleGoToSearch}
+              placeholder="Bấm vào đây để chuyển qua Danh mục Tra cứu nhanh không dấu..."
+              className="w-full pl-11 pr-28 py-3 bg-slate-950 text-white placeholder-slate-400 rounded-xl text-sm font-semibold border border-slate-700 group-hover:border-amber-400 shadow-inner cursor-pointer transition-all"
+            />
+            <Search className="w-5 h-5 text-amber-400 absolute left-3.5 top-3.5" />
+            <div className="absolute right-3 top-2.5 text-xs bg-amber-400 text-slate-950 px-3 py-1 rounded-lg font-extrabold flex items-center gap-1 shadow">
+              <span>Mở Tra cứu</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 font-medium pt-1">
+            <div className="flex items-center space-x-4">
+              <span className="flex items-center gap-1">
+                <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                <span>{units.length} Đơn vị quản lý</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Lọc theo Chu kỳ & Danh mục</span>
+              </span>
+            </div>
+            <span className="text-amber-400 font-bold group-hover:underline">
+              Chuyển tới Danh mục Tra cứu &rarr;
+            </span>
           </div>
         </div>
       </div>

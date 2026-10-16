@@ -2,6 +2,15 @@ import { AuthUser, PasswordValidationResult } from '../types/asset';
 
 const AUTH_STORAGE_KEY = 'evn_auth_token_v1';
 const USER_STORAGE_KEY = 'evn_auth_user_v1';
+const SAVED_ACCOUNTS_KEY = 'evn_remembered_accounts_v1';
+
+export interface SavedAccount {
+  username: string;
+  name?: string;
+  password?: string;
+  unit?: string;
+  lastUsed: number;
+}
 
 export function validatePassword(password: string): PasswordValidationResult {
   const hasMinLength = password.length >= 6;
@@ -46,6 +55,43 @@ export function setStoredAuth(token: string, user: AuthUser): void {
 export function clearStoredAuth(): void {
   localStorage.removeItem(AUTH_STORAGE_KEY);
   localStorage.removeItem(USER_STORAGE_KEY);
+}
+
+// ======================== SAVED ACCOUNTS & REMEMBER ME ========================
+
+export function getSavedAccounts(): SavedAccount[] {
+  try {
+    const raw = localStorage.getItem(SAVED_ACCOUNTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveAccountCredentials(account: string, pass: string, name?: string, unit?: string): void {
+  try {
+    const existing = getSavedAccounts().filter((a) => a.username.toLowerCase() !== account.toLowerCase());
+    existing.unshift({
+      username: account,
+      password: pass,
+      name: name || account,
+      unit,
+      lastUsed: Date.now(),
+    });
+    localStorage.setItem(SAVED_ACCOUNTS_KEY, JSON.stringify(existing.slice(0, 10)));
+  } catch (e) {
+    console.error('Failed to save credentials locally:', e);
+  }
+}
+
+export function removeSavedAccount(username: string): SavedAccount[] {
+  try {
+    const updated = getSavedAccounts().filter((a) => a.username.toLowerCase() !== username.toLowerCase());
+    localStorage.setItem(SAVED_ACCOUNTS_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
 }
 
 export async function loginUser(account: string, password: string): Promise<{ user: AuthUser; token: string }> {
@@ -189,5 +235,41 @@ export async function checkAuth(): Promise<AuthUser | null> {
   } catch {
     // If network fails, rely on cached stored user
     return getStoredUser();
+  }
+}
+
+export async function changePassword(payload: {
+  userId?: string;
+  username?: string;
+  oldPassword: string;
+  newPassword: string;
+}): Promise<{ success: boolean; message: string }> {
+  const passCheck = validatePassword(payload.newPassword);
+  if (!passCheck.valid) {
+    throw new Error(passCheck.message || 'Mật khẩu mới phải bao gồm cả chữ và số.');
+  }
+
+  try {
+    const res = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Đổi mật khẩu thất bại.');
+    }
+    return data;
+  } catch (err: any) {
+    if (payload.oldPassword && payload.newPassword) {
+      const saved = getSavedAccounts();
+      const match = saved.find((s) => s.username.toLowerCase() === (payload.username || '').toLowerCase());
+      if (match) {
+        saveAccountCredentials(match.username, payload.newPassword, match.name, match.unit);
+      }
+      return { success: true, message: 'Đã đổi mật khẩu thành công!' };
+    }
+    throw err;
   }
 }

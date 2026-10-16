@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
-import { validatePassword } from '../services/auth';
+import React, { useState, useEffect } from 'react';
+import {
+  validatePassword,
+  getSavedAccounts,
+  saveAccountCredentials,
+  removeSavedAccount,
+  SavedAccount,
+} from '../services/auth';
 import { AuthUser } from '../types/asset';
 import {
   Lock,
@@ -12,6 +18,9 @@ import {
   AlertCircle,
   Building2,
   ArrowRight,
+  Trash2,
+  BookmarkCheck,
+  KeyRound,
 } from 'lucide-react';
 
 interface LoginScreenProps {
@@ -23,6 +32,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // Saved account suggestions list
+  const [savedAccountsList, setSavedAccountsList] = useState<SavedAccount[]>([]);
+  const [showSavedDropdown, setShowSavedDropdown] = useState(false);
 
   // Register fields
   const [name, setName] = useState('');
@@ -34,6 +48,38 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
   // Live password validation
   const passValidation = validatePassword(password);
+
+  // Load saved accounts on component mount
+  useEffect(() => {
+    const list = getSavedAccounts();
+    setSavedAccountsList(list);
+    if (list.length > 0) {
+      // Auto-fill most recent account
+      const top = list[0];
+      setAccount(top.username);
+      if (top.password) {
+        setPassword(top.password);
+      }
+    }
+  }, []);
+
+  const handleSelectSavedAccount = (item: SavedAccount) => {
+    setAccount(item.username);
+    if (item.password) {
+      setPassword(item.password);
+    }
+    setShowSavedDropdown(false);
+  };
+
+  const handleRemoveSaved = (e: React.MouseEvent, username: string) => {
+    e.stopPropagation();
+    const updated = removeSavedAccount(username);
+    setSavedAccountsList(updated);
+    if (account === username) {
+      setAccount('');
+      setPassword('');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,10 +113,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           password,
           unit: unit.trim() || 'Cán bộ Điện lực',
         });
+
+        if (rememberMe) {
+          saveAccountCredentials(account.trim(), password, res.user.name, res.user.unit);
+        }
+
         onLoginSuccess(res.user, res.token);
       } else {
         const { loginUser } = await import('../services/auth');
         const res = await loginUser(account.trim(), password);
+
+        if (rememberMe) {
+          saveAccountCredentials(account.trim(), password, res.user.name, res.user.unit);
+        }
+
         onLoginSuccess(res.user, res.token);
       }
     } catch (err: any) {
@@ -104,6 +160,50 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             <span>Hệ thống Bảo mật Cán bộ EVN</span>
           </div>
         </div>
+
+        {/* Saved Accounts Chips Suggestion Bar for 2nd Login */}
+        {!isRegister && savedAccountsList.length > 0 && (
+          <div className="bg-slate-950/80 border border-blue-900/60 p-3 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-blue-300 font-bold">
+              <span className="flex items-center gap-1">
+                <BookmarkCheck className="w-3.5 h-3.5 text-amber-400" />
+                Tài khoản đã nhớ trên thiết bị:
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowSavedDropdown(!showSavedDropdown)}
+                className="text-amber-400 hover:underline text-[10px]"
+              >
+                {showSavedDropdown ? 'Thu gọn' : `Hiện (${savedAccountsList.length})`}
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {savedAccountsList.map((acc) => (
+                <div
+                  key={acc.username}
+                  onClick={() => handleSelectSavedAccount(acc)}
+                  className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                    account.toLowerCase() === acc.username.toLowerCase()
+                      ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md'
+                      : 'bg-slate-900 text-slate-200 border-slate-700 hover:bg-slate-800'
+                  }`}
+                >
+                  <User className="w-3 h-3 shrink-0" />
+                  <span className="truncate max-w-[110px]">{acc.name || acc.username}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => handleRemoveSaved(e, acc.username)}
+                    className="p-0.5 text-slate-400 hover:text-rose-500 rounded"
+                    title="Xóa tài khoản này khỏi danh sách nhớ"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Error Alert */}
         {error && (
@@ -174,7 +274,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             <div className="relative">
               <input
                 type="text"
-                placeholder={isRegister ? 'Tên đăng nhập (viết liền)' : 'Nhập tên tài khoản hoặc email...'}
+                placeholder={isRegister ? 'Tên đăng nhập (viết liền)' : 'luctt1, admin, hoặc email...'}
                 value={account}
                 onChange={(e) => setAccount(e.target.value)}
                 required
@@ -211,6 +311,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
+            </div>
+
+            {/* Remember password checkbox */}
+            <div className="flex items-center justify-between pt-2">
+              <label className="flex items-center space-x-2 text-xs font-semibold text-slate-300 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 accent-amber-400 rounded focus:ring-2 focus:ring-amber-400"
+                />
+                <span>Tự động nhớ tài khoản & mật khẩu cho lần sau</span>
+              </label>
             </div>
 
             {/* Live Password Rules Checklist */}
@@ -281,7 +394,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
       <footer className="mt-8 text-center text-[11px] text-slate-500 space-y-1">
         <p>Hệ thống Thông tin Quản lý Kỹ thuật & SCL Thiết bị Điện lực EVN</p>
-        <p>Bảo mật xác thực đa cấp • Tự động đồng bộ Realtime Web & Mobile</p>
+        <p>Bảo mật xác thực đa cấp • Tự động nhớ mật khẩu & đồng bộ Realtime Web & Mobile</p>
       </footer>
     </div>
   );
